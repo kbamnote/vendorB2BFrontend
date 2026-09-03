@@ -5,16 +5,9 @@ import { useToast } from '../../context/ToastContext';
 import { Button, Input, Modal, Select } from '../ui';
 import { ROLE_LABELS, ROLES } from '../../utils/constants';
 import { fieldErrors } from '../../utils/format';
+import { copyCredentials, suggestPassword, validatePassword } from '../../utils/password';
 
 const EMPTY = { name: '', email: '', password: '', phone: '', designation: '', vendor: '' };
-
-/** Generates a readable password that satisfies the server rules. */
-function suggestPassword() {
-  const words = ['Vendor', 'Portal', 'Access', 'Secure', 'Supply', 'Orbit'];
-  const word = words[Math.floor(Math.random() * words.length)];
-  const digits = Math.floor(1000 + Math.random() * 9000);
-  return `${word}@${digits}`;
-}
 
 /**
  * Creates or edits a portal login.
@@ -74,10 +67,8 @@ export default function UserFormModal({
     if (!isEdit) {
       if (!form.email.trim()) next.email = 'Email is required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = 'Enter a valid email';
-      if (!form.password) next.password = 'Password is required';
-      else if (form.password.length < 8) next.password = 'At least 8 characters';
-      else if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password))
-        next.password = 'Must contain at least one letter and one number';
+      const passwordError = validatePassword(form.password);
+      if (passwordError) next.password = passwordError;
       if (needsVendorPicker && !form.vendor) next.vendor = 'Select a vendor';
     }
     setErrors(next);
@@ -120,13 +111,10 @@ export default function UserFormModal({
     }
   };
 
-  const copyCredentials = async () => {
-    try {
-      await navigator.clipboard.writeText(`Email: ${form.email}\nPassword: ${form.password}`);
-      toast.success('Credentials copied to clipboard');
-    } catch {
-      toast.error('Could not copy - please copy the details manually');
-    }
+  const copy = async () => {
+    const done = await copyCredentials(form.email, form.password);
+    if (done) toast.success('Credentials copied to clipboard');
+    else toast.error('Could not copy - please copy the details manually');
   };
 
   return (
@@ -211,7 +199,7 @@ export default function UserFormModal({
                 >
                   Generate
                 </Button>
-                <Button variant="secondary" icon={Copy} onClick={copyCredentials} title="Copy credentials">
+                <Button variant="secondary" icon={Copy} onClick={copy} title="Copy credentials">
                   Copy
                 </Button>
               </div>

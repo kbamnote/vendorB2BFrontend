@@ -4,12 +4,7 @@ import { userApi } from '../../api/services';
 import { useToast } from '../../context/ToastContext';
 import { Button, Input, Modal } from '../ui';
 import { fieldErrors } from '../../utils/format';
-
-function suggestPassword() {
-  const words = ['Vendor', 'Portal', 'Access', 'Secure', 'Supply', 'Orbit'];
-  const word = words[Math.floor(Math.random() * words.length)];
-  return `${word}@${Math.floor(1000 + Math.random() * 9000)}`;
-}
+import { copyCredentials, suggestPassword, validatePassword } from '../../utils/password';
 
 /** Lets a manager issue a new password for a user they own. */
 export default function ResetPasswordModal({ open, user, onClose, onSaved }) {
@@ -26,8 +21,9 @@ export default function ResetPasswordModal({ open, user, onClose, onSaved }) {
   }, [open]);
 
   const submit = async () => {
-    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-      setError('Minimum 8 characters with at least one letter and one number');
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -46,12 +42,9 @@ export default function ResetPasswordModal({ open, user, onClose, onSaved }) {
   };
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(`Email: ${user?.email}\nPassword: ${password}`);
-      toast.success('Credentials copied');
-    } catch {
-      toast.error('Could not copy - please copy manually');
-    }
+    const done = await copyCredentials(user?.email, password);
+    if (done) toast.success('Credentials copied');
+    else toast.error('Could not copy - please copy manually');
   };
 
   return (
