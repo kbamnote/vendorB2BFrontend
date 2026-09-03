@@ -458,6 +458,13 @@ img { max-width: 100%; display: block; }
 .bar-track { height: 8px; border-radius: 999px; background: var(--ink-100); overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 999px; background: var(--brand-500); }
 
+/* ---------- Request summary bar ---------- */
+.request-bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 18px; margin-bottom: 16px;
+  border-color: var(--brand-200); background: var(--brand-50);
+}
+
 /* ---------- Image upload ---------- */
 .thumb {
   width: 34px; height: 34px; flex: none;

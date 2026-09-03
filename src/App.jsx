@@ -18,6 +18,9 @@ import VendorDashboard from './pages/vendor/Dashboard';
 import VendorProducts from './pages/vendor/Products';
 import VendorStaff from './pages/vendor/Staff';
 
+import RequestList from './pages/requests/RequestList';
+import RequestDetail from './pages/requests/RequestDetail';
+
 export default function App() {
   return (
     <Routes>
@@ -42,6 +45,8 @@ export default function App() {
             <Route path="/admin/vendors/:id" element={<VendorDetail />} />
             <Route path="/admin/products" element={<Products />} />
             <Route path="/admin/users" element={<VendorAdmins />} />
+            <Route path="/admin/requests" element={<RequestList />} />
+            <Route path="/admin/requests/:id" element={<RequestDetail />} />
           </Route>
 
           {/* ---------- Vendor admin ---------- */}
@@ -49,12 +54,16 @@ export default function App() {
             <Route path="/vendor/dashboard" element={<VendorDashboard />} />
             <Route path="/vendor/products" element={<VendorProducts />} />
             <Route path="/vendor/staff" element={<VendorStaff />} />
+            <Route path="/vendor/requests" element={<RequestList />} />
+            <Route path="/vendor/requests/:id" element={<RequestDetail />} />
           </Route>
 
           {/* ---------- Vendor staff ---------- */}
           <Route element={<RequireRole roles={[ROLES.VENDOR_STAFF]} />}>
             <Route path="/staff/dashboard" element={<VendorDashboard />} />
             <Route path="/staff/products" element={<VendorProducts />} />
+            <Route path="/staff/requests" element={<RequestList />} />
+            <Route path="/staff/requests/:id" element={<RequestDetail />} />
           </Route>
 
           <Route path="/404" element={<NotFound />} />

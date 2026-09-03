@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Users, ShoppingBag, ShieldCheck, ArrowRight, Layers } from 'lucide-react';
+import { Package, Users, ShoppingBag, ShieldCheck, ArrowRight, Layers, FileText } from 'lucide-react';
 import { dashboardApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -89,11 +89,15 @@ export default function VendorDashboard() {
           />
         )}
         <StatCard
-          label="Organisation"
-          value={vendor?.code || '-'}
-          meta={vendor?.name}
-          icon={ShieldCheck}
-          tone="green"
+          label="Open requests"
+          value={stats.openRequests ?? 0}
+          meta={
+            stats.awaitingDecision
+              ? `${stats.awaitingDecision} quotation(s) need your decision`
+              : 'Nothing waiting on you'
+          }
+          icon={FileText}
+          tone={stats.awaitingDecision ? 'red' : 'green'}
         />
       </div>
 

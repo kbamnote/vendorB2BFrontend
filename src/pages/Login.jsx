@@ -155,21 +155,10 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="auth-hint">
-            <strong style={{ color: 'var(--ink-700)' }}>Demo logins</strong> (after running{' '}
-            <code>npm run seed:demo</code>)
-            <div className="mt-8 col gap-4">
-              <span>
-                Super admin: <code>superadmin@portal.com</code> / <code>SuperAdmin@123</code>
-              </span>
-              <span>
-                Vendor admin: <code>admin@adani.com</code> / <code>Vendor@123</code>
-              </span>
-              <span>
-                Vendor staff: <code>staff@adani.com</code> / <code>Staff@123</code>
-              </span>
-            </div>
-          </div>
+          <p className="auth-hint">
+            Accounts are issued by your administrator. If you cannot sign in, contact them to have
+            your credentials reset.
+          </p>
         </div>
       </main>
     </div>

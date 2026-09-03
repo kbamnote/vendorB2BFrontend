@@ -25,4 +25,35 @@ export const HOME_ROUTE = {
 
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Vendor B2B Portal';
 
+export const REQUEST_STATUS = {
+  SUBMITTED: 'submitted',
+  QUOTED: 'quoted',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+};
+
+export const REQUEST_STATUS_LABELS = {
+  [REQUEST_STATUS.SUBMITTED]: 'Awaiting quotation',
+  [REQUEST_STATUS.QUOTED]: 'Quotation sent',
+  [REQUEST_STATUS.ACCEPTED]: 'Accepted',
+  [REQUEST_STATUS.REJECTED]: 'Rejected',
+  [REQUEST_STATUS.CANCELLED]: 'Cancelled',
+};
+
+export const REQUEST_STATUS_TONE = {
+  [REQUEST_STATUS.SUBMITTED]: 'warning',
+  [REQUEST_STATUS.QUOTED]: 'info',
+  [REQUEST_STATUS.ACCEPTED]: 'success',
+  [REQUEST_STATUS.REJECTED]: 'danger',
+  [REQUEST_STATUS.CANCELLED]: '',
+};
+
+/** Where the requests module lives for each role. */
+export const REQUESTS_ROUTE = {
+  [ROLES.SUPER_ADMIN]: '/admin/requests',
+  [ROLES.VENDOR_ADMIN]: '/vendor/requests',
+  [ROLES.VENDOR_STAFF]: '/staff/requests',
+};
+
 export const PAGE_SIZE = 10;

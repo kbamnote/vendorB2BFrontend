@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Package, Users, Link2, ArrowRight, UserCog } from 'lucide-react';
+import { Building2, Package, Users, Link2, ArrowRight, UserCog, FileText } from 'lucide-react';
 import { dashboardApi } from '../../api/services';
 import {
   Card,
@@ -76,6 +76,13 @@ export default function AdminDashboard() {
           meta={`${stats.vendorAdmins} admins - ${stats.vendorStaff} staff`}
           icon={Users}
           tone="amber"
+        />
+        <StatCard
+          label="Awaiting quotation"
+          value={stats.awaitingQuotation ?? 0}
+          meta={`${stats.totalRequests ?? 0} requests in total`}
+          icon={FileText}
+          tone={stats.awaitingQuotation ? 'red' : 'green'}
         />
       </div>
 
@@ -197,6 +204,9 @@ export default function AdminDashboard() {
               </Link>
               <Link to="/admin/users" className="btn btn-secondary btn-block">
                 <UserCog size={16} /> Issue vendor admin logins
+              </Link>
+              <Link to="/admin/requests" className="btn btn-secondary btn-block">
+                <FileText size={16} /> Review quotation requests
               </Link>
             </div>
           </CardBody>

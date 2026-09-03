@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Package, Grid2x2, List } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Package, Grid2x2, List, ShoppingCart, X } from 'lucide-react';
 import { myApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
 import useDebounce from '../../hooks/useDebounce';
+import RequestQuoteModal from '../../components/forms/RequestQuoteModal';
 import {
+  Button,
   Card,
   CardBody,
   DataTable,
@@ -15,35 +18,94 @@ import {
   SearchInput,
   StatusBadge,
 } from '../../components/ui';
-import { PAGE_SIZE } from '../../utils/constants';
+import { PAGE_SIZE, REQUESTS_ROUTE } from '../../utils/constants';
 import { currency, formatDate } from '../../utils/format';
 import { thumbUrl } from '../../utils/upload';
 
 /**
  * The vendor facing catalogue.
  *
- * This page calls /my/products, which the API scopes to the signed-in user's
- * own vendor - there is no way to request another vendor's list from here.
+ * Reads through /my/products, which the API scopes to the signed-in user's own
+ * vendor. Quantities entered here build up a purchase request that the super
+ * admin prices and returns as a quotation.
  */
 export default function VendorProducts() {
-  const { vendor, isVendorStaff } = useAuth();
+  const { user, vendor, isVendorStaff } = useAuth();
+  const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [view, setView] = useState('table');
   const debouncedSearch = useDebounce(search);
 
+  // productId -> { productId, name, sku, unit, effectivePrice, quantity }
+  const [cart, setCart] = useState({});
+  const [cartOpen, setCartOpen] = useState(false);
+
   const params = useMemo(
-    () => ({
-      page,
-      limit: PAGE_SIZE,
-      search: debouncedSearch || undefined,
-      status: 'active',
-    }),
+    () => ({ page, limit: PAGE_SIZE, search: debouncedSearch || undefined, status: 'active' }),
     [page, debouncedSearch]
   );
 
   const { items, pagination, loading, error } = usePaginatedQuery(myApi.products, params);
+
+  const lines = useMemo(() => Object.values(cart), [cart]);
+  const totalUnits = lines.reduce((sum, line) => sum + line.quantity, 0);
+
+  const setQuantity = (row, rawValue) => {
+    const quantity = Math.max(0, Math.floor(Number(rawValue) || 0));
+    const productId = row.product._id;
+
+    setCart((current) => {
+      const next = { ...current };
+      if (!quantity) {
+        delete next[productId];
+        return next;
+      }
+      next[productId] = {
+        productId,
+        name: row.product.name,
+        sku: row.product.sku,
+        unit: row.product.unit,
+        effectivePrice: row.effectivePrice,
+        quantity,
+      };
+      return next;
+    });
+  };
+
+  // Used from inside the review modal, where only the id is to hand.
+  const setQuantityById = (productId, rawValue) => {
+    const quantity = Math.max(0, Math.floor(Number(rawValue) || 0));
+    setCart((current) => {
+      const next = { ...current };
+      if (!quantity) delete next[productId];
+      else next[productId] = { ...next[productId], quantity };
+      return next;
+    });
+  };
+
+  const removeLine = (productId) =>
+    setCart((current) => {
+      const next = { ...current };
+      delete next[productId];
+      return next;
+    });
+
+  const quantityInput = (row) => (
+    <input
+      className="input"
+      type="number"
+      min="0"
+      step="1"
+      placeholder="0"
+      style={{ width: 92, textAlign: 'center' }}
+      value={cart[row.product._id]?.quantity ?? ''}
+      onChange={(e) => setQuantity(row, e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={`Quantity for ${row.product.name}`}
+    />
+  );
 
   const columns = [
     {
@@ -91,12 +153,6 @@ export default function VendorProducts() {
       ),
     },
     {
-      key: 'tax',
-      header: 'Tax',
-      align: 'center',
-      render: (row) => <span className="text-sm">{row.product.taxPercent || 0}%</span>,
-    },
-    {
       key: 'assignedAt',
       header: 'Available since',
       render: (row) => <span className="text-sm text-muted">{formatDate(row.assignedAt)}</span>,
@@ -106,14 +162,54 @@ export default function VendorProducts() {
       header: 'Status',
       render: (row) => <StatusBadge active={row.product.isActive} />,
     },
+    {
+      key: 'quantity',
+      header: 'Order qty',
+      align: 'center',
+      render: quantityInput,
+    },
   ];
 
   return (
     <div>
       <PageHeader
         title={isVendorStaff ? 'Products' : 'My products'}
-        description={`Everything assigned to ${vendor?.name || 'your organisation'} by the super admin. Products outside this list are not visible to you.`}
+        description={`Everything assigned to ${
+          vendor?.name || 'your organisation'
+        }. Enter the quantities you want and send a request - the super admin will reply with a quotation.`}
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => navigate(REQUESTS_ROUTE[user?.role] || '/')}
+          >
+            View my requests
+          </Button>
+        }
       />
+
+      {lines.length > 0 && (
+        <div className="card request-bar">
+          <div className="row gap-12 grow" style={{ minWidth: 0 }}>
+            <div className="stat-icon" style={{ position: 'static', width: 38, height: 38 }}>
+              <ShoppingCart size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="text-strong">
+                {lines.length} product{lines.length === 1 ? '' : 's'} selected
+              </div>
+              <div className="text-xs text-muted">{totalUnits} units in this request</div>
+            </div>
+          </div>
+          <div className="row gap-8">
+            <Button variant="ghost" icon={X} onClick={() => setCart({})}>
+              Clear
+            </Button>
+            <Button icon={ShoppingCart} onClick={() => setCartOpen(true)}>
+              Review &amp; send request
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <div className="toolbar">
@@ -217,6 +313,10 @@ export default function VendorProducts() {
                         </span>
                         <span className="text-xs text-muted">per {row.product.unit}</span>
                       </div>
+                      <div className="row gap-8 mt-16">
+                        {quantityInput(row)}
+                        <span className="text-xs text-muted">{row.product.unit} to request</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -227,6 +327,18 @@ export default function VendorProducts() {
 
         <Pagination pagination={pagination} onPageChange={setPage} />
       </Card>
+
+      <RequestQuoteModal
+        open={cartOpen}
+        lines={lines}
+        onRemove={removeLine}
+        onQuantityChange={setQuantityById}
+        onClose={() => setCartOpen(false)}
+        onSent={(request) => {
+          setCart({});
+          navigate(`${REQUESTS_ROUTE[user?.role]}/${request._id}`);
+        }}
+      />
     </div>
   );
 }

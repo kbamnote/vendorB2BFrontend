@@ -56,6 +56,16 @@ export const userApi = {
   remove: (id) => client.delete(`/users/${id}`),
 };
 
+/* ---------------- Purchase requests & quotations ---------------- */
+export const requestApi = {
+  list: (params) => client.get('/requests', { params }),
+  stats: () => client.get('/requests/stats'),
+  get: (id) => client.get(`/requests/${id}`),
+  create: (payload) => client.post('/requests', payload),
+  quote: (id, payload) => client.patch(`/requests/${id}/quote`, payload),
+  setStatus: (id, status, note) => client.patch(`/requests/${id}/status`, { status, note }),
+};
+
 /* ---------------- Image uploads (Cloudinary) ---------------- */
 export const uploadApi = {
   status: () => client.get('/uploads/status'),

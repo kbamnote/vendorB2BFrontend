@@ -6,6 +6,7 @@ import {
   UserCog,
   ShoppingBag,
   UserCircle,
+  FileText,
 } from 'lucide-react';
 import { ROLES } from '../../utils/constants';
 
@@ -22,6 +23,7 @@ export const NAV_BY_ROLE = {
         { to: '/admin/vendors', label: 'Vendors', icon: Building2 },
         { to: '/admin/products', label: 'Product Catalogue', icon: Package },
         { to: '/admin/users', label: 'Vendor Admins', icon: UserCog },
+        { to: '/admin/requests', label: 'Quotation Requests', icon: FileText },
       ],
     },
     {
@@ -40,6 +42,7 @@ export const NAV_BY_ROLE = {
       items: [
         { to: '/vendor/products', label: 'My Products', icon: ShoppingBag },
         { to: '/vendor/staff', label: 'Staff Accounts', icon: Users },
+        { to: '/vendor/requests', label: 'My Requests', icon: FileText },
       ],
     },
     {
@@ -55,7 +58,10 @@ export const NAV_BY_ROLE = {
     },
     {
       label: 'Workspace',
-      items: [{ to: '/staff/products', label: 'Products', icon: ShoppingBag }],
+      items: [
+        { to: '/staff/products', label: 'Products', icon: ShoppingBag },
+        { to: '/staff/requests', label: 'My Requests', icon: FileText },
+      ],
     },
     {
       label: 'Account',
