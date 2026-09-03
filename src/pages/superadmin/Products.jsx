@@ -17,6 +17,7 @@ import {
 } from '../../components/ui';
 import { PAGE_SIZE } from '../../utils/constants';
 import { currency } from '../../utils/format';
+import { thumbUrl } from '../../utils/upload';
 
 export default function Products() {
   const toast = useToast();
@@ -87,9 +88,13 @@ export default function Products() {
       header: 'Product',
       render: (row) => (
         <div className="row gap-12">
-          <div className="avatar sq">
-            <Package size={16} />
-          </div>
+          {row.imageUrl ? (
+            <img className="thumb" src={thumbUrl(row.imageUrl)} alt="" loading="lazy" />
+          ) : (
+            <div className="avatar sq">
+              <Package size={16} />
+            </div>
+          )}
           <div style={{ minWidth: 0 }}>
             <div className="cell-primary truncate">{row.name}</div>
             <div className="text-xs text-muted mono">{row.sku}</div>

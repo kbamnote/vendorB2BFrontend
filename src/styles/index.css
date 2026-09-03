@@ -458,6 +458,35 @@ img { max-width: 100%; display: block; }
 .bar-track { height: 8px; border-radius: 999px; background: var(--ink-100); overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 999px; background: var(--brand-500); }
 
+/* ---------- Image upload ---------- */
+.thumb {
+  width: 34px; height: 34px; flex: none;
+  border-radius: 8px; object-fit: cover;
+  border: 1px solid var(--border); background: var(--ink-100);
+}
+
+.image-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 26px 18px; text-align: center; cursor: pointer;
+  border: 1.5px dashed var(--ink-300); border-radius: var(--radius);
+  background: var(--ink-50); color: var(--ink-600);
+  transition: border-color .16s ease, background .16s ease;
+}
+.image-drop:hover, .image-drop.dragging { border-color: var(--brand-400); background: var(--brand-50); }
+.image-drop.busy { cursor: progress; border-style: solid; }
+.image-drop:focus-visible { outline: none; border-color: var(--brand-400); box-shadow: 0 0 0 3px var(--brand-50); }
+
+.image-preview {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface);
+}
+.image-preview-thumb {
+  width: 84px; height: 84px; flex: none;
+  border-radius: var(--radius); object-fit: cover;
+  border: 1px solid var(--border); background: var(--ink-100);
+}
+
 /* ---------- Login ---------- */
 .auth-shell { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 1fr; }
 .auth-aside {

@@ -56,6 +56,13 @@ export const userApi = {
   remove: (id) => client.delete(`/users/${id}`),
 };
 
+/* ---------------- Image uploads (Cloudinary) ---------------- */
+export const uploadApi = {
+  status: () => client.get('/uploads/status'),
+  signature: () => client.get('/uploads/signature'),
+  destroy: (publicId) => client.delete('/uploads', { data: { publicId } }),
+};
+
 /* ---------------- Vendor scoped catalogue ---------------- */
 export const myApi = {
   products: (params) => client.get('/my/products', { params }),

@@ -39,6 +39,7 @@ import {
 } from '../../components/ui';
 import { PAGE_SIZE, ROLES } from '../../utils/constants';
 import { currency, formatDate } from '../../utils/format';
+import { thumbUrl } from '../../utils/upload';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -140,9 +141,13 @@ export default function VendorDetail() {
       header: 'Product',
       render: (row) => (
         <div className="row gap-12">
-          <div className="avatar sq">
-            <Package size={16} />
-          </div>
+          {row.product.imageUrl ? (
+            <img className="thumb" src={thumbUrl(row.product.imageUrl)} alt="" loading="lazy" />
+          ) : (
+            <div className="avatar sq">
+              <Package size={16} />
+            </div>
+          )}
           <div style={{ minWidth: 0 }}>
             <div className="cell-primary truncate">{row.product.name}</div>
             <div className="text-xs text-muted mono">{row.product.sku}</div>

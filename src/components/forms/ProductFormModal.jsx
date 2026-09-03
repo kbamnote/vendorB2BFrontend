@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { productApi } from '../../api/services';
 import { useToast } from '../../context/ToastContext';
-import { Button, Input, Modal, Select, Textarea } from '../ui';
+import { Button, ImageUpload, Input, Modal, Select, Textarea } from '../ui';
 import { fieldErrors } from '../../utils/format';
 
 const EMPTY = {
@@ -16,6 +16,7 @@ const EMPTY = {
   hsnCode: '',
   taxPercent: '',
   imageUrl: '',
+  imagePublicId: '',
 };
 
 const UNITS = ['pcs', 'box', 'pack', 'ream', 'roll', 'kg', 'litre', 'sqft', 'set'];
@@ -44,6 +45,7 @@ export default function ProductFormModal({ open, product, categories = [], onClo
             hsnCode: product.hsnCode || '',
             taxPercent: product.taxPercent ?? '',
             imageUrl: product.imageUrl || '',
+            imagePublicId: product.imagePublicId || '',
           }
         : EMPTY
     );
@@ -178,14 +180,16 @@ export default function ProductFormModal({ open, product, categories = [], onClo
           />
           <Input label="HSN code" value={form.hsnCode} onChange={set('hsnCode')} error={errors.hsnCode} />
 
-          <Input
-            className="span-2"
-            label="Image URL"
-            placeholder="https://..."
-            value={form.imageUrl}
-            onChange={set('imageUrl')}
-            error={errors.imageUrl}
-          />
+          <div className="span-2">
+            <ImageUpload
+              value={form.imageUrl}
+              publicId={form.imagePublicId}
+              disabled={saving}
+              onChange={({ imageUrl, imagePublicId }) =>
+                setForm((current) => ({ ...current, imageUrl, imagePublicId }))
+              }
+            />
+          </div>
 
           <Textarea
             className="span-2"
