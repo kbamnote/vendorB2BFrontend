@@ -1,0 +1,62 @@
+import client from './client';
+
+/* ---------------- Auth ---------------- */
+export const authApi = {
+  login: (payload) => client.post('/auth/login', payload),
+  me: () => client.get('/auth/me'),
+  updateProfile: (payload) => client.patch('/auth/profile', payload),
+  changePassword: (payload) => client.patch('/auth/change-password', payload),
+};
+
+/* ---------------- Dashboard ---------------- */
+export const dashboardApi = {
+  summary: () => client.get('/dashboard/summary'),
+};
+
+/* ---------------- Vendors (super admin) ---------------- */
+export const vendorApi = {
+  list: (params) => client.get('/vendors', { params }),
+  get: (id) => client.get(`/vendors/${id}`),
+  create: (payload) => client.post('/vendors', payload),
+  update: (id, payload) => client.put(`/vendors/${id}`, payload),
+  setStatus: (id, isActive) => client.patch(`/vendors/${id}/status`, { isActive }),
+  remove: (id) => client.delete(`/vendors/${id}`),
+
+  // Product assignment
+  products: (vendorId, params) => client.get(`/vendors/${vendorId}/products`, { params }),
+  assignableProducts: (vendorId, params) =>
+    client.get(`/vendors/${vendorId}/assignable-products`, { params }),
+  assignProducts: (vendorId, productIds) =>
+    client.post(`/vendors/${vendorId}/products`, { productIds }),
+  unassignProducts: (vendorId, productIds) =>
+    client.delete(`/vendors/${vendorId}/products`, { data: { productIds } }),
+  updateAssignment: (vendorId, productId, payload) =>
+    client.patch(`/vendors/${vendorId}/products/${productId}`, payload),
+};
+
+/* ---------------- Products (super admin catalogue) ---------------- */
+export const productApi = {
+  list: (params) => client.get('/products', { params }),
+  categories: () => client.get('/products/categories'),
+  get: (id) => client.get(`/products/${id}`),
+  create: (payload) => client.post('/products', payload),
+  update: (id, payload) => client.put(`/products/${id}`, payload),
+  setStatus: (id, isActive) => client.patch(`/products/${id}/status`, { isActive }),
+  remove: (id) => client.delete(`/products/${id}`),
+};
+
+/* ---------------- Users (vendor admins + staff) ---------------- */
+export const userApi = {
+  list: (params) => client.get('/users', { params }),
+  get: (id) => client.get(`/users/${id}`),
+  create: (payload) => client.post('/users', payload),
+  update: (id, payload) => client.put(`/users/${id}`, payload),
+  setStatus: (id, isActive) => client.patch(`/users/${id}/status`, { isActive }),
+  resetPassword: (id, password) => client.patch(`/users/${id}/password`, { password }),
+  remove: (id) => client.delete(`/users/${id}`),
+};
+
+/* ---------------- Vendor scoped catalogue ---------------- */
+export const myApi = {
+  products: (params) => client.get('/my/products', { params }),
+};
