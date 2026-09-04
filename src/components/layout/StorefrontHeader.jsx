@@ -23,9 +23,9 @@ import { initials } from '../../utils/format';
 /**
  * Storefront header for vendor roles.
  *
- * Everything a vendor needs lives up here - search, categories, basket and the
- * account menu holding staff, requests and profile - so the shop itself gets
- * the full width of the page.
+ * Carries search, the basket and the account menu holding staff, requests and
+ * profile. Categories live in the listing page's left rail on desktop; the
+ * mobile drawer repeats them because that rail collapses on small screens.
  */
 export default function StorefrontHeader() {
   const { user, vendor, isVendorAdmin, signOut } = useAuth();
@@ -191,26 +191,6 @@ export default function StorefrontHeader() {
         </div>
       </div>
 
-      <nav className="store-subnav">
-        <button
-          type="button"
-          className={`store-subnav-item ${!activeCategory ? 'active' : ''}`}
-          onClick={() => goToCategory('')}
-        >
-          All products
-        </button>
-        {categories.map((entry) => (
-          <button
-            key={entry.category}
-            type="button"
-            className={`store-subnav-item ${activeCategory === entry.category ? 'active' : ''}`}
-            onClick={() => goToCategory(entry.category)}
-          >
-            {entry.category}
-            <span className="store-subnav-count">{entry.count}</span>
-          </button>
-        ))}
-      </nav>
 
       {drawerOpen && (
         <>

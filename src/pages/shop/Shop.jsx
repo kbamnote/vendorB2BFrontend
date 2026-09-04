@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ShoppingCart, Plus, Check, X, Sparkles } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Check, X, Sparkles, LayoutGrid } from 'lucide-react';
 import { myApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -35,8 +35,8 @@ export default function Shop() {
 
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState('newest');
+  const [categories, setCategories] = useState([]);
   const [totalAvailable, setTotalAvailable] = useState(0);
-  const [categoryCount, setCategoryCount] = useState(0);
 
   // Any change of filter starts again from the first page.
   useEffect(() => setPage(1), [category, query]);
@@ -47,10 +47,10 @@ export default function Shop() {
       try {
         const response = await myApi.categories();
         if (cancelled) return;
+        setCategories(response.data.categories || []);
         setTotalAvailable(response.data.total || 0);
-        setCategoryCount((response.data.categories || []).length);
       } catch {
-        if (!cancelled) setTotalAvailable(0);
+        if (!cancelled) setCategories([]);
       }
     })();
     return () => {
@@ -82,6 +82,13 @@ export default function Shop() {
 
   const hasFilters = Boolean(category || query);
 
+  const selectCategory = (value) => {
+    const next = new URLSearchParams();
+    if (value) next.set('category', value);
+    if (query) next.set('q', query);
+    setSearchParams(next);
+  };
+
   return (
     <div>
       {!hasFilters && (
@@ -92,8 +99,8 @@ export default function Shop() {
             </span>
             <h1 className="shop-hero-title">Everything available to your organisation</h1>
             <p className="shop-hero-text">
-              {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across {categoryCount}{' '}
-              categor{categoryCount === 1 ? 'y' : 'ies'}. Add what you need to the basket and send it
+              {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across {categories.length}{' '}
+              categor{categories.length === 1 ? 'y' : 'ies'}. Add what you need to the basket and send it
               for a quotation - pricing is confirmed before anything is committed.
             </p>
           </div>
@@ -121,7 +128,41 @@ export default function Shop() {
         </div>
       )}
 
-      <Card>
+      <div className="shop-layout">
+        <aside className="shop-rail">
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">
+                <LayoutGrid size={15} style={{ verticalAlign: -2, marginRight: 6 }} />
+                Categories
+              </div>
+            </div>
+            <nav className="shop-cat-list">
+              <button
+                type="button"
+                className={`shop-cat ${category === '' ? 'active' : ''}`}
+                onClick={() => selectCategory('')}
+              >
+                <span>All products</span>
+                <span className="badge">{totalAvailable}</span>
+              </button>
+              {categories.map((entry) => (
+                <button
+                  key={entry.category}
+                  type="button"
+                  className={`shop-cat ${category === entry.category ? 'active' : ''}`}
+                  onClick={() => selectCategory(entry.category)}
+                >
+                  <span className="truncate">{entry.category}</span>
+                  <span className="badge">{entry.count}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        <div style={{ minWidth: 0 }}>
+          <Card>
         <div className="toolbar">
           <span className="text-sm text-muted">
             {pagination.total} result{pagination.total === 1 ? '' : 's'}
@@ -165,7 +206,9 @@ export default function Shop() {
         )}
 
         <Pagination pagination={pagination} onPageChange={setPage} />
-      </Card>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
