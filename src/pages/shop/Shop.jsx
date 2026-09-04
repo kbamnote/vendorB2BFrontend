@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Package, ShoppingCart, Plus, Check, LayoutGrid, Sparkles } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Package, ShoppingCart, Plus, Check, X, Sparkles } from 'lucide-react';
 import { myApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
-import useDebounce from '../../hooks/useDebounce';
-import { Card, EmptyState, LoadingBlock, Pagination, SearchInput } from '../../components/ui';
+import { Card, EmptyState, LoadingBlock, Pagination } from '../../components/ui';
 import { SHOP_ROUTE } from '../../utils/constants';
 import { currency } from '../../utils/format';
 import { thumbUrl } from '../../utils/upload';
@@ -19,26 +18,28 @@ const SORTS = [
 ];
 
 /**
- * The vendor storefront.
+ * The storefront listing.
  *
- * Reads the same vendor-scoped catalogue as My Products, but presented as a
- * shop: category rail, product cards and an add-to-cart. Checkout submits a
- * purchase request, because B2B pricing is settled by quotation.
+ * Search and category come from the URL, because the header owns both - that
+ * keeps a filtered view shareable and the back button working.
  */
 export default function Shop() {
   const { user, vendor } = useAuth();
   const cart = useCart();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const shopPath = SHOP_ROUTE[user?.role] || '/';
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [sort, setSort] = useState('newest');
-  const debouncedSearch = useDebounce(search);
+  const category = searchParams.get('category') || '';
+  const query = searchParams.get('q') || '';
 
-  const [categories, setCategories] = useState([]);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('newest');
   const [totalAvailable, setTotalAvailable] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
+
+  // Any change of filter starts again from the first page.
+  useEffect(() => setPage(1), [category, query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,10 +47,10 @@ export default function Shop() {
       try {
         const response = await myApi.categories();
         if (cancelled) return;
-        setCategories(response.data.categories || []);
         setTotalAvailable(response.data.total || 0);
+        setCategoryCount((response.data.categories || []).length);
       } catch {
-        if (!cancelled) setCategories([]);
+        if (!cancelled) setTotalAvailable(0);
       }
     })();
     return () => {
@@ -61,17 +62,16 @@ export default function Shop() {
     () => ({
       page,
       limit: 12,
-      search: debouncedSearch || undefined,
+      search: query || undefined,
       category: category || undefined,
       status: 'active',
       onlyActiveProducts: 'true',
     }),
-    [page, debouncedSearch, category]
+    [page, query, category]
   );
 
   const { items, pagination, loading, error } = usePaginatedQuery(myApi.products, params);
 
-  // The API paginates by assignment date; sorting is applied to the page in hand.
   const sorted = useMemo(() => {
     const copy = [...items];
     if (sort === 'price_asc') copy.sort((a, b) => a.effectivePrice - b.effectivePrice);
@@ -80,119 +80,92 @@ export default function Shop() {
     return copy;
   }, [items, sort]);
 
-  const selectCategory = (value) => {
-    setCategory(value);
-    setPage(1);
-  };
+  const hasFilters = Boolean(category || query);
 
   return (
-    <div className="shop">
-      <section className="shop-hero">
-        <div>
-          <span className="badge badge-brand">
-            <Sparkles size={12} /> {vendor?.name}
-          </span>
-          <h1 className="shop-hero-title">Everything available to your organisation</h1>
-          <p className="shop-hero-text">
-            {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across {categories.length}{' '}
-            categor{categories.length === 1 ? 'y' : 'ies'}. Add what you need to the basket and send
-            it for a quotation - pricing is confirmed by the Print World team before anything is
-            committed.
-          </p>
-        </div>
-        <button type="button" className="btn shop-hero-cta" onClick={() => navigate(`${shopPath}/cart`)}>
-          <ShoppingCart size={16} />
-          View basket
-          {cart.count > 0 && <span className="nav-badge">{cart.count}</span>}
-        </button>
-      </section>
-
-      <div className="shop-layout">
-        <aside className="shop-rail">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title">
-                <LayoutGrid size={15} style={{ verticalAlign: -2, marginRight: 6 }} />
-                Categories
-              </div>
-            </div>
-            <nav className="shop-cat-list">
-              <button
-                type="button"
-                className={`shop-cat ${category === '' ? 'active' : ''}`}
-                onClick={() => selectCategory('')}
-              >
-                <span>All products</span>
-                <span className="badge">{totalAvailable}</span>
-              </button>
-              {categories.map((entry) => (
-                <button
-                  key={entry.category}
-                  type="button"
-                  className={`shop-cat ${category === entry.category ? 'active' : ''}`}
-                  onClick={() => selectCategory(entry.category)}
-                >
-                  <span className="truncate">{entry.category}</span>
-                  <span className="badge">{entry.count}</span>
-                </button>
-              ))}
-            </nav>
+    <div>
+      {!hasFilters && (
+        <section className="shop-hero">
+          <div>
+            <span className="badge badge-brand">
+              <Sparkles size={12} /> {vendor?.name}
+            </span>
+            <h1 className="shop-hero-title">Everything available to your organisation</h1>
+            <p className="shop-hero-text">
+              {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across {categoryCount}{' '}
+              categor{categoryCount === 1 ? 'y' : 'ies'}. Add what you need to the basket and send it
+              for a quotation - pricing is confirmed before anything is committed.
+            </p>
           </div>
-        </aside>
+          <button
+            type="button"
+            className="btn shop-hero-cta"
+            onClick={() => navigate(`${shopPath}/cart`)}
+          >
+            <ShoppingCart size={16} />
+            View basket
+            {cart.count > 0 && <span className="nav-badge">{cart.count}</span>}
+          </button>
+        </section>
+      )}
 
-        <div style={{ minWidth: 0 }}>
-          <Card>
-            <div className="toolbar">
-              <SearchInput
-                className="search"
-                value={search}
-                onChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
-                placeholder="Search products..."
-              />
-              <select className="select" value={sort} onChange={(e) => setSort(e.target.value)}>
-                {SORTS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="text-sm text-muted" style={{ marginLeft: 'auto' }}>
-                {pagination.total} result{pagination.total === 1 ? '' : 's'}
-                {category && ` in ${category}`}
-              </span>
-            </div>
-
-            {loading ? (
-              <LoadingBlock label="Loading products" />
-            ) : error ? (
-              <div style={{ padding: 20 }}>
-                <div className="alert alert-error">{error.message}</div>
-              </div>
-            ) : !sorted.length ? (
-              <EmptyState
-                icon={Package}
-                title="Nothing here"
-                description={
-                  search || category
-                    ? 'No product matches these filters. Try clearing them.'
-                    : 'No products have been assigned to your organisation yet.'
-                }
-              />
-            ) : (
-              <div className="shop-grid">
-                {sorted.map((row) => (
-                  <ProductCard key={row.assignmentId} row={row} shopPath={shopPath} cart={cart} />
-                ))}
-              </div>
-            )}
-
-            <Pagination pagination={pagination} onPageChange={setPage} />
-          </Card>
+      {hasFilters && (
+        <div className="shop-filters">
+          <h1 className="shop-results-title">
+            {category || 'All products'}
+            {query && <span className="text-muted"> matching &ldquo;{query}&rdquo;</span>}
+          </h1>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSearchParams({})}>
+            <X size={14} /> Clear filters
+          </button>
         </div>
-      </div>
+      )}
+
+      <Card>
+        <div className="toolbar">
+          <span className="text-sm text-muted">
+            {pagination.total} result{pagination.total === 1 ? '' : 's'}
+          </span>
+          <select
+            className="select"
+            style={{ marginLeft: 'auto' }}
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            {SORTS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {loading ? (
+          <LoadingBlock label="Loading products" />
+        ) : error ? (
+          <div style={{ padding: 20 }}>
+            <div className="alert alert-error">{error.message}</div>
+          </div>
+        ) : !sorted.length ? (
+          <EmptyState
+            icon={Package}
+            title="Nothing here"
+            description={
+              hasFilters
+                ? 'No product matches these filters. Try clearing them.'
+                : 'No products have been assigned to your organisation yet.'
+            }
+          />
+        ) : (
+          <div className="shop-grid">
+            {sorted.map((row) => (
+              <ProductCard key={row.assignmentId} row={row} shopPath={shopPath} cart={cart} />
+            ))}
+          </div>
+        )}
+
+        <Pagination pagination={pagination} onPageChange={setPage} />
+      </Card>
     </div>
   );
 }

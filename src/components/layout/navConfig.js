@@ -2,16 +2,19 @@ import {
   LayoutDashboard,
   Building2,
   Package,
-  Users,
   UserCog,
-  ShoppingBag,
   UserCircle,
   FileText,
-  Store,
 } from 'lucide-react';
 import { ROLES } from '../../utils/constants';
 
-/** Sidebar entries per role. The router enforces the same boundaries. */
+/**
+ * Sidebar entries for the admin console.
+ *
+ * Only the super admin uses a sidebar. Vendor admins and vendor staff get the
+ * storefront shell instead, where the same destinations live in the header's
+ * account menu - see StorefrontHeader.
+ */
 export const NAV_BY_ROLE = {
   [ROLES.SUPER_ADMIN]: [
     {
@@ -25,45 +28,6 @@ export const NAV_BY_ROLE = {
         { to: '/admin/products', label: 'Product Catalogue', icon: Package },
         { to: '/admin/users', label: 'Vendor Admins', icon: UserCog },
         { to: '/admin/requests', label: 'Quotation Requests', icon: FileText },
-      ],
-    },
-    {
-      label: 'Account',
-      items: [{ to: '/profile', label: 'My Profile', icon: UserCircle }],
-    },
-  ],
-
-  [ROLES.VENDOR_ADMIN]: [
-    {
-      label: 'Overview',
-      items: [{ to: '/vendor/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
-    },
-    {
-      label: 'Workspace',
-      items: [
-        { to: '/vendor/shop', label: 'Shop', icon: Store },
-        { to: '/vendor/products', label: 'Product List', icon: ShoppingBag },
-        { to: '/vendor/staff', label: 'Staff Accounts', icon: Users },
-        { to: '/vendor/requests', label: 'My Requests', icon: FileText },
-      ],
-    },
-    {
-      label: 'Account',
-      items: [{ to: '/profile', label: 'My Profile', icon: UserCircle }],
-    },
-  ],
-
-  [ROLES.VENDOR_STAFF]: [
-    {
-      label: 'Overview',
-      items: [{ to: '/staff/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
-    },
-    {
-      label: 'Workspace',
-      items: [
-        { to: '/staff/shop', label: 'Shop', icon: Store },
-        { to: '/staff/products', label: 'Product List', icon: ShoppingBag },
-        { to: '/staff/requests', label: 'My Requests', icon: FileText },
       ],
     },
     {

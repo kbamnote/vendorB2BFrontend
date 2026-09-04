@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth, RequireRole, RedirectIfAuthenticated } from './routes/ProtectedRoute';
-import DashboardLayout from './components/layout/DashboardLayout';
+import RoleLayout from './components/layout/RoleLayout';
 import { ROLES } from './utils/constants';
 
 import Login from './pages/Login';
@@ -37,7 +37,7 @@ export default function App() {
       />
 
       <Route element={<RequireAuth />}>
-        <Route element={<DashboardLayout />}>
+        <Route element={<RoleLayout />}>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/profile" element={<Profile />} />
 
