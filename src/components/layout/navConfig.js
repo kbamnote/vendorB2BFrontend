@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   UserCircle,
   FileText,
+  Store,
 } from 'lucide-react';
 import { ROLES } from '../../utils/constants';
 
@@ -40,7 +41,8 @@ export const NAV_BY_ROLE = {
     {
       label: 'Workspace',
       items: [
-        { to: '/vendor/products', label: 'My Products', icon: ShoppingBag },
+        { to: '/vendor/shop', label: 'Shop', icon: Store },
+        { to: '/vendor/products', label: 'Product List', icon: ShoppingBag },
         { to: '/vendor/staff', label: 'Staff Accounts', icon: Users },
         { to: '/vendor/requests', label: 'My Requests', icon: FileText },
       ],
@@ -59,7 +61,8 @@ export const NAV_BY_ROLE = {
     {
       label: 'Workspace',
       items: [
-        { to: '/staff/products', label: 'Products', icon: ShoppingBag },
+        { to: '/staff/shop', label: 'Shop', icon: Store },
+        { to: '/staff/products', label: 'Product List', icon: ShoppingBag },
         { to: '/staff/requests', label: 'My Requests', icon: FileText },
       ],
     },

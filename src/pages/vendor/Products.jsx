@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Grid2x2, List, ShoppingCart, X } from 'lucide-react';
 import { myApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
 import useDebounce from '../../hooks/useDebounce';
 import RequestQuoteModal from '../../components/forms/RequestQuoteModal';
@@ -38,8 +39,8 @@ export default function VendorProducts() {
   const [view, setView] = useState('table');
   const debouncedSearch = useDebounce(search);
 
-  // productId -> { productId, name, sku, unit, effectivePrice, quantity }
-  const [cart, setCart] = useState({});
+  // Shared with the storefront, so both views show one basket.
+  const cart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
 
   const params = useMemo(
@@ -49,49 +50,6 @@ export default function VendorProducts() {
 
   const { items, pagination, loading, error } = usePaginatedQuery(myApi.products, params);
 
-  const lines = useMemo(() => Object.values(cart), [cart]);
-  const totalUnits = lines.reduce((sum, line) => sum + line.quantity, 0);
-
-  const setQuantity = (row, rawValue) => {
-    const quantity = Math.max(0, Math.floor(Number(rawValue) || 0));
-    const productId = row.product._id;
-
-    setCart((current) => {
-      const next = { ...current };
-      if (!quantity) {
-        delete next[productId];
-        return next;
-      }
-      next[productId] = {
-        productId,
-        name: row.product.name,
-        sku: row.product.sku,
-        unit: row.product.unit,
-        effectivePrice: row.effectivePrice,
-        quantity,
-      };
-      return next;
-    });
-  };
-
-  // Used from inside the review modal, where only the id is to hand.
-  const setQuantityById = (productId, rawValue) => {
-    const quantity = Math.max(0, Math.floor(Number(rawValue) || 0));
-    setCart((current) => {
-      const next = { ...current };
-      if (!quantity) delete next[productId];
-      else next[productId] = { ...next[productId], quantity };
-      return next;
-    });
-  };
-
-  const removeLine = (productId) =>
-    setCart((current) => {
-      const next = { ...current };
-      delete next[productId];
-      return next;
-    });
-
   const quantityInput = (row) => (
     <input
       className="input"
@@ -100,8 +58,8 @@ export default function VendorProducts() {
       step="1"
       placeholder="0"
       style={{ width: 92, textAlign: 'center' }}
-      value={cart[row.product._id]?.quantity ?? ''}
-      onChange={(e) => setQuantity(row, e.target.value)}
+      value={cart.quantityOf(row.product._id) || ''}
+      onChange={(e) => cart.setQuantity(row, e.target.value)}
       onClick={(e) => e.stopPropagation()}
       aria-label={`Quantity for ${row.product.name}`}
     />
@@ -187,7 +145,7 @@ export default function VendorProducts() {
         }
       />
 
-      {lines.length > 0 && (
+      {cart.count > 0 && (
         <div className="card request-bar">
           <div className="row gap-12 grow" style={{ minWidth: 0 }}>
             <div className="stat-icon" style={{ position: 'static', width: 38, height: 38 }}>
@@ -195,13 +153,13 @@ export default function VendorProducts() {
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="text-strong">
-                {lines.length} product{lines.length === 1 ? '' : 's'} selected
+                {cart.count} product{cart.count === 1 ? '' : 's'} selected
               </div>
-              <div className="text-xs text-muted">{totalUnits} units in this request</div>
+              <div className="text-xs text-muted">{cart.totalUnits} units in this request</div>
             </div>
           </div>
           <div className="row gap-8">
-            <Button variant="ghost" icon={X} onClick={() => setCart({})}>
+            <Button variant="ghost" icon={X} onClick={cart.clear}>
               Clear
             </Button>
             <Button icon={ShoppingCart} onClick={() => setCartOpen(true)}>
@@ -330,12 +288,12 @@ export default function VendorProducts() {
 
       <RequestQuoteModal
         open={cartOpen}
-        lines={lines}
-        onRemove={removeLine}
-        onQuantityChange={setQuantityById}
+        lines={cart.lines}
+        onRemove={cart.remove}
+        onQuantityChange={cart.setQuantityById}
         onClose={() => setCartOpen(false)}
         onSent={(request) => {
-          setCart({});
+          cart.clear();
           navigate(`${REQUESTS_ROUTE[user?.role]}/${request._id}`);
         }}
       />

@@ -56,4 +56,10 @@ export const REQUESTS_ROUTE = {
   [ROLES.VENDOR_STAFF]: '/staff/requests',
 };
 
+/** Storefront root per role. */
+export const SHOP_ROUTE = {
+  [ROLES.VENDOR_ADMIN]: '/vendor/shop',
+  [ROLES.VENDOR_STAFF]: '/staff/shop',
+};
+
 export const PAGE_SIZE = 10;

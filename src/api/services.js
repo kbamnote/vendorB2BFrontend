@@ -76,4 +76,6 @@ export const uploadApi = {
 /* ---------------- Vendor scoped catalogue ---------------- */
 export const myApi = {
   products: (params) => client.get('/my/products', { params }),
+  get: (id) => client.get(`/my/products/${id}`),
+  categories: () => client.get('/my/categories'),
 };
