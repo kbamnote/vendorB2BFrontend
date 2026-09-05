@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Package, Plus, Pencil, Power, Trash2 } from 'lucide-react';
+import { Package, Plus, Pencil, Power, Trash2, Store, X } from 'lucide-react';
 import { productApi } from '../../api/services';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
 import useDebounce from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
 import ProductFormModal from '../../components/forms/ProductFormModal';
+import AssignVendorsModal from '../../components/forms/AssignVendorsModal';
 import {
   Button,
   Card,
@@ -45,6 +46,8 @@ export default function Products() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [assignTarget, setAssignTarget] = useState(null); // a product, or 'bulk'
+  const [checked, setChecked] = useState([]);
   const [confirm, setConfirm] = useState(null);
   const [working, setWorking] = useState(false);
 
@@ -82,7 +85,42 @@ export default function Products() {
     }
   };
 
+  const toggleRow = (id) =>
+    setChecked((current) =>
+      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]
+    );
+
+  const pageIds = items.map((item) => item._id);
+  const allOnPageChecked = pageIds.length > 0 && pageIds.every((id) => checked.includes(id));
+
+  const toggleAllOnPage = () =>
+    setChecked((current) =>
+      allOnPageChecked
+        ? current.filter((id) => !pageIds.includes(id))
+        : [...new Set([...current, ...pageIds])]
+    );
+
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={allOnPageChecked}
+          onChange={toggleAllOnPage}
+          aria-label="Select all on this page"
+        />
+      ),
+      width: 44,
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={checked.includes(row._id)}
+          onChange={() => toggleRow(row._id)}
+          aria-label={`Select ${row.name}`}
+        />
+      ),
+    },
     {
       key: 'name',
       header: 'Product',
@@ -122,9 +160,17 @@ export default function Products() {
       header: 'Assigned to',
       align: 'center',
       render: (row) => (
-        <span className="badge badge-brand">
-          {row.assignedVendorCount} vendor{row.assignedVendorCount === 1 ? '' : 's'}
-        </span>
+        <button
+          type="button"
+          className={`badge ${row.assignedVendorCount ? 'badge-brand' : ''}`}
+          style={{ cursor: 'pointer', border: 'none' }}
+          title="Choose which vendors get this product"
+          onClick={() => setAssignTarget(row)}
+        >
+          {row.assignedVendorCount
+            ? `${row.assignedVendorCount} vendor${row.assignedVendorCount === 1 ? '' : 's'}`
+            : 'Assign'}
+        </button>
       ),
     },
     {
@@ -138,6 +184,14 @@ export default function Products() {
       align: 'right',
       render: (row) => (
         <div className="row gap-6" style={{ justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            title="Assign to vendors"
+            onClick={() => setAssignTarget(row)}
+          >
+            <Store size={15} />
+          </button>
           <button
             type="button"
             className="btn btn-ghost btn-icon"
@@ -199,6 +253,30 @@ export default function Products() {
           </Button>
         }
       />
+
+      {checked.length > 0 && (
+        <div className="card request-bar">
+          <div className="row gap-12 grow" style={{ minWidth: 0 }}>
+            <div className="stat-icon" style={{ position: 'static', width: 38, height: 38 }}>
+              <Store size={18} />
+            </div>
+            <div>
+              <div className="text-strong">
+                {checked.length} product{checked.length === 1 ? '' : 's'} selected
+              </div>
+              <div className="text-xs text-muted">Assign them to one or more vendors at once</div>
+            </div>
+          </div>
+          <div className="row gap-8">
+            <Button variant="ghost" icon={X} onClick={() => setChecked([])}>
+              Clear
+            </Button>
+            <Button icon={Store} onClick={() => setAssignTarget('bulk')}>
+              Assign to vendors
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <div className="toolbar">
@@ -273,6 +351,17 @@ export default function Products() {
         onSaved={() => {
           reload();
           loadCategories();
+        }}
+      />
+
+      <AssignVendorsModal
+        open={Boolean(assignTarget)}
+        product={assignTarget === 'bulk' ? null : assignTarget}
+        productIds={assignTarget === 'bulk' ? checked : []}
+        onClose={() => setAssignTarget(null)}
+        onSaved={() => {
+          setChecked([]);
+          reload();
         }}
       />
 

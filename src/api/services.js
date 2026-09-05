@@ -43,6 +43,11 @@ export const productApi = {
   update: (id, payload) => client.put(`/products/${id}`, payload),
   setStatus: (id, isActive) => client.patch(`/products/${id}/status`, { isActive }),
   remove: (id) => client.delete(`/products/${id}`),
+
+  // Assignment from the catalogue side
+  setVendors: (id, vendorIds) => client.put(`/products/${id}/vendors`, { vendorIds }),
+  bulkAssign: (productIds, vendorIds) =>
+    client.post('/products/assign', { productIds, vendorIds }),
 };
 
 /* ---------------- Users (vendor admins + staff) ---------------- */

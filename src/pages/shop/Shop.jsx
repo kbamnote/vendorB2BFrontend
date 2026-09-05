@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Package, ShoppingCart, Plus, Check, X, Sparkles, LayoutGrid } from 'lucide-react';
+import {
+  Package,
+  ShoppingCart,
+  Plus,
+  Check,
+  X,
+  LayoutGrid,
+  ArrowRight,
+  ShieldCheck,
+  FileText,
+  Truck,
+} from 'lucide-react';
 import { myApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
-import { Card, EmptyState, LoadingBlock, Pagination } from '../../components/ui';
+import { Card, EmptyState, Pagination } from '../../components/ui';
 import { SHOP_ROUTE } from '../../utils/constants';
 import { currency } from '../../utils/format';
 import { thumbUrl } from '../../utils/upload';
@@ -17,11 +28,17 @@ const SORTS = [
   { value: 'name', label: 'Name A-Z' },
 ];
 
+const PROMISES = [
+  { icon: FileText, title: 'Quoted, not guessed', text: 'Firm pricing before you commit' },
+  { icon: ShieldCheck, title: 'Your own rates', text: 'Pricing negotiated for your account' },
+  { icon: Truck, title: 'Agreed timelines', text: 'Delivery confirmed with each quotation' },
+];
+
 /**
- * The storefront listing.
+ * The storefront listing - the landing page for vendor roles.
  *
- * Search and category come from the URL, because the header owns both - that
- * keeps a filtered view shareable and the back button working.
+ * Search and category live in the URL so a filtered view is shareable and the
+ * back button behaves.
  */
 export default function Shop() {
   const { user, vendor } = useAuth();
@@ -38,7 +55,6 @@ export default function Shop() {
   const [categories, setCategories] = useState([]);
   const [totalAvailable, setTotalAvailable] = useState(0);
 
-  // Any change of filter starts again from the first page.
   useEffect(() => setPage(1), [category, query]);
 
   useEffect(() => {
@@ -92,28 +108,83 @@ export default function Shop() {
   return (
     <div>
       {!hasFilters && (
-        <section className="shop-hero">
-          <div>
-            <span className="badge badge-brand">
-              <Sparkles size={12} /> {vendor?.name}
-            </span>
-            <h1 className="shop-hero-title">Everything available to your organisation</h1>
-            <p className="shop-hero-text">
-              {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across {categories.length}{' '}
-              categor{categories.length === 1 ? 'y' : 'ies'}. Add what you need to the basket and send it
-              for a quotation - pricing is confirmed before anything is committed.
-            </p>
+        <>
+          <section className="hero">
+            <div className="hero-copy">
+              <span className="hero-eyebrow">{vendor?.name}</span>
+              <h1 className="hero-title">
+                Your catalogue,
+                <br />
+                priced for you.
+              </h1>
+              <p className="hero-text">
+                {totalAvailable} product{totalAvailable === 1 ? '' : 's'} across{' '}
+                {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}, reserved for your
+                organisation. Build a basket and send it over - we come back with a firm quotation.
+              </p>
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="btn hero-btn"
+                  onClick={() => navigate(`${shopPath}/cart`)}
+                >
+                  <ShoppingCart size={16} />
+                  {cart.count > 0 ? `Basket (${cart.count})` : 'View basket'}
+                </button>
+                <a className="hero-link" href="#catalogue">
+                  Browse everything <ArrowRight size={15} />
+                </a>
+              </div>
+            </div>
+            <div className="hero-art" aria-hidden="true">
+              <span className="hero-blob" />
+              <Package size={116} strokeWidth={1} />
+            </div>
+          </section>
+
+          <div className="promise-row">
+            {PROMISES.map((item) => (
+              <div className="promise" key={item.title}>
+                <span className="promise-icon">
+                  <item.icon size={17} />
+                </span>
+                <div>
+                  <div className="promise-title">{item.title}</div>
+                  <div className="promise-text">{item.text}</div>
+                </div>
+              </div>
+            ))}
           </div>
-          <button
-            type="button"
-            className="btn shop-hero-cta"
-            onClick={() => navigate(`${shopPath}/cart`)}
-          >
-            <ShoppingCart size={16} />
-            View basket
-            {cart.count > 0 && <span className="nav-badge">{cart.count}</span>}
-          </button>
-        </section>
+
+          {categories.length > 1 && (
+            <section className="section">
+              <div className="section-head">
+                <h2 className="section-title">Shop by category</h2>
+                <span className="text-sm text-muted">{categories.length} categories</span>
+              </div>
+              <div className="cat-tiles">
+                {categories.map((entry) => (
+                  <button
+                    key={entry.category}
+                    type="button"
+                    className="cat-tile"
+                    onClick={() => selectCategory(entry.category)}
+                  >
+                    <span className="cat-tile-media">
+                      {entry.image ? (
+                        <img src={thumbUrl(entry.image, 200)} alt="" loading="lazy" />
+                      ) : (
+                        <Package size={26} color="var(--ink-300)" />
+                      )}
+                    </span>
+                    <span className="cat-tile-name">{entry.category}</span>
+                    <span className="cat-tile-count">{entry.count} items</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {hasFilters && (
@@ -122,91 +193,116 @@ export default function Shop() {
             {category || 'All products'}
             {query && <span className="text-muted"> matching &ldquo;{query}&rdquo;</span>}
           </h1>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSearchParams({})}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setSearchParams({})}
+          >
             <X size={14} /> Clear filters
           </button>
         </div>
       )}
 
-      <div className="shop-layout">
-        <aside className="shop-rail">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title">
-                <LayoutGrid size={15} style={{ verticalAlign: -2, marginRight: 6 }} />
-                Categories
-              </div>
-            </div>
-            <nav className="shop-cat-list">
-              <button
-                type="button"
-                className={`shop-cat ${category === '' ? 'active' : ''}`}
-                onClick={() => selectCategory('')}
-              >
-                <span>All products</span>
-                <span className="badge">{totalAvailable}</span>
-              </button>
-              {categories.map((entry) => (
-                <button
-                  key={entry.category}
-                  type="button"
-                  className={`shop-cat ${category === entry.category ? 'active' : ''}`}
-                  onClick={() => selectCategory(entry.category)}
-                >
-                  <span className="truncate">{entry.category}</span>
-                  <span className="badge">{entry.count}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-        </aside>
-
-        <div style={{ minWidth: 0 }}>
-          <Card>
-        <div className="toolbar">
-          <span className="text-sm text-muted">
-            {pagination.total} result{pagination.total === 1 ? '' : 's'}
-          </span>
-          <select
-            className="select"
-            style={{ marginLeft: 'auto' }}
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          >
-            {SORTS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {loading ? (
-          <LoadingBlock label="Loading products" />
-        ) : error ? (
-          <div style={{ padding: 20 }}>
-            <div className="alert alert-error">{error.message}</div>
-          </div>
-        ) : !sorted.length ? (
-          <EmptyState
-            icon={Package}
-            title="Nothing here"
-            description={
-              hasFilters
-                ? 'No product matches these filters. Try clearing them.'
-                : 'No products have been assigned to your organisation yet.'
-            }
-          />
-        ) : (
-          <div className="shop-grid">
-            {sorted.map((row) => (
-              <ProductCard key={row.assignmentId} row={row} shopPath={shopPath} cart={cart} />
-            ))}
+      <div className="section" id="catalogue">
+        {!hasFilters && (
+          <div className="section-head">
+            <h2 className="section-title">All products</h2>
           </div>
         )}
 
-        <Pagination pagination={pagination} onPageChange={setPage} />
-          </Card>
+        <div className="shop-layout">
+          <aside className="shop-rail">
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title">
+                  <LayoutGrid size={15} style={{ verticalAlign: -2, marginRight: 6 }} />
+                  Categories
+                </div>
+              </div>
+              <nav className="shop-cat-list">
+                <button
+                  type="button"
+                  className={`shop-cat ${category === '' ? 'active' : ''}`}
+                  onClick={() => selectCategory('')}
+                >
+                  <span>All products</span>
+                  <span className="badge">{totalAvailable}</span>
+                </button>
+                {categories.map((entry) => (
+                  <button
+                    key={entry.category}
+                    type="button"
+                    className={`shop-cat ${category === entry.category ? 'active' : ''}`}
+                    onClick={() => selectCategory(entry.category)}
+                  >
+                    <span className="truncate">{entry.category}</span>
+                    <span className="badge">{entry.count}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          <div style={{ minWidth: 0 }}>
+            <Card>
+              <div className="toolbar">
+                <span className="text-sm text-muted">
+                  {pagination.total} product{pagination.total === 1 ? '' : 's'}
+                </span>
+                <select
+                  className="select"
+                  style={{ marginLeft: 'auto' }}
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                >
+                  {SORTS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {loading ? (
+                <div className="shop-grid">
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    // eslint-disable-next-line react/no-array-index-key
+                    <div className="shop-card" key={index}>
+                      <div className="skeleton" style={{ height: 176, borderRadius: 0 }} />
+                      <div className="shop-card-body">
+                        <div className="skeleton" style={{ height: 10, width: '40%' }} />
+                        <div className="skeleton" style={{ height: 14, width: '85%' }} />
+                        <div className="skeleton" style={{ height: 18, width: '55%', marginTop: 8 }} />
+                        <div className="skeleton" style={{ height: 34, marginTop: 10 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div style={{ padding: 20 }}>
+                  <div className="alert alert-error">{error.message}</div>
+                </div>
+              ) : !sorted.length ? (
+                <EmptyState
+                  icon={Package}
+                  title="Nothing here"
+                  description={
+                    hasFilters
+                      ? 'No product matches these filters. Try clearing them.'
+                      : 'No products have been assigned to your organisation yet.'
+                  }
+                />
+              ) : (
+                <div className="shop-grid">
+                  {sorted.map((row) => (
+                    <ProductCard key={row.assignmentId} row={row} shopPath={shopPath} cart={cart} />
+                  ))}
+                </div>
+              )}
+
+              <Pagination pagination={pagination} onPageChange={setPage} />
+            </Card>
+          </div>
         </div>
       </div>
     </div>
@@ -218,32 +314,35 @@ function ProductCard({ row, shopPath, cart }) {
   const inCart = cart.quantityOf(product._id);
 
   return (
-    <article className="shop-card">
+    <article className={`shop-card ${inCart ? 'in-cart' : ''}`.trim()}>
       <Link to={`${shopPath}/${product._id}`} className="shop-card-media">
         {product.imageUrl ? (
           <img src={thumbUrl(product.imageUrl, 480)} alt={product.name} loading="lazy" />
         ) : (
           <Package size={34} color="var(--ink-300)" />
         )}
-        {product.attributes?.length > 0 && <span className="shop-card-tag">Options available</span>}
+        {product.attributes?.length > 0 && <span className="shop-card-tag">Options</span>}
+        {inCart > 0 && (
+          <span className="shop-card-incart">
+            <Check size={11} /> {inCart}
+          </span>
+        )}
       </Link>
 
       <div className="shop-card-body">
-        <span className="text-xs text-muted">{product.category}</span>
+        <span className="shop-card-cat">{product.category}</span>
         <Link to={`${shopPath}/${product._id}`} className="shop-card-title">
           {product.name}
         </Link>
 
         <div className="shop-card-price">
           <span className="shop-price">{currency(row.effectivePrice, product.currency)}</span>
-          <span className="text-xs text-muted">per {product.unit}</span>
+          <span className="shop-card-unit">/ {product.unit}</span>
         </div>
 
-        {row.minOrderQty > 1 && (
-          <span className="text-xs text-muted">
-            Minimum {row.minOrderQty} {product.unit}
-          </span>
-        )}
+        <span className="shop-card-meta">
+          {row.minOrderQty > 1 ? `Min ${row.minOrderQty} ${product.unit}` : 'No minimum'}
+        </span>
 
         <button
           type="button"
@@ -252,11 +351,11 @@ function ProductCard({ row, shopPath, cart }) {
         >
           {inCart ? (
             <>
-              <Check size={15} /> In basket ({inCart})
+              <Plus size={15} /> Add more
             </>
           ) : (
             <>
-              <Plus size={15} /> Add to basket
+              <ShoppingCart size={15} /> Add to basket
             </>
           )}
         </button>

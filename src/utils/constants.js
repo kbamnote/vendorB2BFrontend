@@ -19,8 +19,10 @@ export const ROLE_BADGE = {
 /** Where each role lands after signing in. */
 export const HOME_ROUTE = {
   [ROLES.SUPER_ADMIN]: '/admin/dashboard',
-  [ROLES.VENDOR_ADMIN]: '/vendor/dashboard',
-  [ROLES.VENDOR_STAFF]: '/staff/dashboard',
+  // Vendors are buyers, so they land in the shop. The dashboard stays
+  // reachable from the account menu.
+  [ROLES.VENDOR_ADMIN]: '/vendor/shop',
+  [ROLES.VENDOR_STAFF]: '/staff/shop',
 };
 
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Vendor B2B Portal';
