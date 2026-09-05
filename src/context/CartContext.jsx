@@ -1,14 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { myApi } from '../api/services';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 
 const CartContext = createContext(null);
 
-const storageKey = (vendorId) => `vbp_cart_${vendorId || 'none'}`;
+const SYNC_DELAY = 700;
+const cacheKey = (userId) => `vbp_cart_${userId}`;
 
-/** localStorage can throw in private windows, so every access is guarded. */
-function readCart(vendorId) {
+/** Local cache only exists to paint instantly; the server is the source of truth. */
+function readCache(userId) {
   try {
-    const raw = localStorage.getItem(storageKey(vendorId));
+    const raw = localStorage.getItem(cacheKey(userId));
     const parsed = raw ? JSON.parse(raw) : {};
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
@@ -16,33 +27,110 @@ function readCart(vendorId) {
   }
 }
 
+function writeCache(userId, items) {
+  try {
+    localStorage.setItem(cacheKey(userId), JSON.stringify(items));
+  } catch {
+    // A blocked or full store is not worth interrupting anyone for.
+  }
+}
+
+const toMap = (lines = []) =>
+  lines.reduce((acc, line) => ({ ...acc, [line.productId]: line }), {});
+
 /**
  * The storefront basket.
  *
- * Keyed by vendor so switching accounts on a shared machine never mixes two
- * organisations' baskets. It survives reloads but is deliberately local: the
- * server only hears about it when the vendor submits a purchase request.
+ * Held per user on the server, so it follows a person between devices and
+ * browsers. Edits apply locally at once and are pushed to the API on a short
+ * debounce, which keeps the UI instant without a request per keystroke.
  */
 export function CartProvider({ children }) {
-  const { user, vendor } = useAuth();
-  const vendorId = vendor?._id || user?.vendor?._id || null;
+  const { user, isSuperAdmin } = useAuth();
+  const toast = useToast();
+
+  const userId = user?._id || null;
+  const enabled = Boolean(userId) && !isSuperAdmin;
 
   const [items, setItems] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  // Load (and reload when the signed-in vendor changes).
-  useEffect(() => {
-    setItems(vendorId ? readCart(vendorId) : {});
-  }, [vendorId]);
+  // Guards so hydration never triggers a save, and so a save is not fired
+  // before the first load has landed.
+  const hydratedFor = useRef(null);
+  const timerRef = useRef(null);
 
-  // Persist on every change.
+  // Load the saved basket whenever the signed-in user changes.
   useEffect(() => {
-    if (!vendorId) return;
-    try {
-      localStorage.setItem(storageKey(vendorId), JSON.stringify(items));
-    } catch {
-      // A full or blocked store is not worth interrupting the user for.
+    if (!enabled) {
+      setItems({});
+      hydratedFor.current = null;
+      return undefined;
     }
-  }, [items, vendorId]);
+
+    let cancelled = false;
+    setItems(readCache(userId));
+    setLoading(true);
+
+    (async () => {
+      try {
+        const response = await myApi.getCart();
+        if (cancelled) return;
+
+        setItems(toMap(response.data.items));
+        if (response.data.removed > 0) {
+          toast.info(
+            `${response.data.removed} item(s) left your basket because they are no longer available.`
+          );
+        }
+      } catch {
+        // Offline or a failed call: keep whatever the cache painted.
+      } finally {
+        if (!cancelled) {
+          hydratedFor.current = userId;
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, userId, toast]);
+
+  // Push changes up, debounced. Skipped until the first load has completed.
+  useEffect(() => {
+    if (!enabled || hydratedFor.current !== userId) return undefined;
+
+    writeCache(userId, items);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const payload = Object.values(items).map((line) => ({
+        product: line.productId,
+        quantity: line.quantity,
+      }));
+      myApi.saveCart(payload).catch(() => {
+        // The basket still works locally; the next edit retries.
+      });
+    }, SYNC_DELAY);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [items, enabled, userId]);
+
+  const lineFrom = (row, existing, quantity) => ({
+    productId: row.product?._id || row.productId || existing?.productId,
+    name: row.product?.name ?? existing?.name,
+    sku: row.product?.sku ?? existing?.sku,
+    unit: row.product?.unit ?? existing?.unit,
+    imageUrl: row.product?.imageUrl ?? existing?.imageUrl,
+    currency: row.product?.currency ?? existing?.currency,
+    effectivePrice: row.effectivePrice ?? existing?.effectivePrice ?? 0,
+    minOrderQty: row.minOrderQty ?? existing?.minOrderQty ?? 1,
+    quantity,
+  });
 
   const setQuantity = useCallback((row, rawQuantity) => {
     const quantity = Math.max(0, Math.floor(Number(rawQuantity) || 0));
@@ -55,16 +143,7 @@ export function CartProvider({ children }) {
         delete next[productId];
         return next;
       }
-      next[productId] = {
-        productId,
-        name: row.product?.name ?? next[productId]?.name,
-        sku: row.product?.sku ?? next[productId]?.sku,
-        unit: row.product?.unit ?? next[productId]?.unit,
-        imageUrl: row.product?.imageUrl ?? next[productId]?.imageUrl,
-        effectivePrice: row.effectivePrice ?? next[productId]?.effectivePrice ?? 0,
-        minOrderQty: row.minOrderQty ?? next[productId]?.minOrderQty ?? 1,
-        quantity,
-      };
+      next[productId] = lineFrom(row, current[productId], quantity);
       return next;
     });
   }, []);
@@ -79,29 +158,16 @@ export function CartProvider({ children }) {
     });
   }, []);
 
-  const add = useCallback(
-    (row, quantity = 1) => {
-      const productId = row.product?._id || row.productId;
-      setItems((current) => {
-        const existing = current[productId];
-        const nextQuantity = (existing?.quantity || 0) + Math.max(1, Math.floor(quantity));
-        return {
-          ...current,
-          [productId]: {
-            productId,
-            name: row.product?.name ?? existing?.name,
-            sku: row.product?.sku ?? existing?.sku,
-            unit: row.product?.unit ?? existing?.unit,
-            imageUrl: row.product?.imageUrl ?? existing?.imageUrl,
-            effectivePrice: row.effectivePrice ?? existing?.effectivePrice ?? 0,
-            minOrderQty: row.minOrderQty ?? existing?.minOrderQty ?? 1,
-            quantity: nextQuantity,
-          },
-        };
-      });
-    },
-    []
-  );
+  const add = useCallback((row, quantity = 1) => {
+    const productId = row.product?._id || row.productId;
+    if (!productId) return;
+
+    setItems((current) => {
+      const existing = current[productId];
+      const nextQuantity = (existing?.quantity || 0) + Math.max(1, Math.floor(quantity));
+      return { ...current, [productId]: lineFrom(row, existing, nextQuantity) };
+    });
+  }, []);
 
   const remove = useCallback((productId) => {
     setItems((current) => {
@@ -111,13 +177,22 @@ export function CartProvider({ children }) {
     });
   }, []);
 
-  const clear = useCallback(() => setItems({}), []);
+  const clear = useCallback(() => {
+    setItems({});
+    if (!enabled) return;
+    // Clearing is usually followed by a navigation, so send it immediately
+    // rather than letting the debounce race the unmount.
+    if (timerRef.current) clearTimeout(timerRef.current);
+    writeCache(userId, {});
+    myApi.clearCart().catch(() => {});
+  }, [enabled, userId]);
 
   const value = useMemo(() => {
     const lines = Object.values(items);
     return {
       items,
       lines,
+      loading,
       count: lines.length,
       totalUnits: lines.reduce((sum, line) => sum + line.quantity, 0),
       indicativeTotal: lines.reduce(
@@ -131,7 +206,7 @@ export function CartProvider({ children }) {
       remove,
       clear,
     };
-  }, [items, add, setQuantity, setQuantityById, remove, clear]);
+  }, [items, loading, add, setQuantity, setQuantityById, remove, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -28,6 +28,7 @@ export const HOME_ROUTE = {
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Vendor B2B Portal';
 
 export const REQUEST_STATUS = {
+  PENDING_APPROVAL: 'pending_approval',
   SUBMITTED: 'submitted',
   QUOTED: 'quoted',
   ACCEPTED: 'accepted',
@@ -36,6 +37,7 @@ export const REQUEST_STATUS = {
 };
 
 export const REQUEST_STATUS_LABELS = {
+  [REQUEST_STATUS.PENDING_APPROVAL]: 'In approval',
   [REQUEST_STATUS.SUBMITTED]: 'Awaiting quotation',
   [REQUEST_STATUS.QUOTED]: 'Quotation sent',
   [REQUEST_STATUS.ACCEPTED]: 'Accepted',
@@ -44,8 +46,9 @@ export const REQUEST_STATUS_LABELS = {
 };
 
 export const REQUEST_STATUS_TONE = {
-  [REQUEST_STATUS.SUBMITTED]: 'warning',
-  [REQUEST_STATUS.QUOTED]: 'info',
+  [REQUEST_STATUS.PENDING_APPROVAL]: 'warning',
+  [REQUEST_STATUS.SUBMITTED]: 'info',
+  [REQUEST_STATUS.QUOTED]: 'brand',
   [REQUEST_STATUS.ACCEPTED]: 'success',
   [REQUEST_STATUS.REJECTED]: 'danger',
   [REQUEST_STATUS.CANCELLED]: '',
@@ -62,6 +65,32 @@ export const REQUESTS_ROUTE = {
 export const SHOP_ROUTE = {
   [ROLES.VENDOR_ADMIN]: '/vendor/shop',
   [ROLES.VENDOR_STAFF]: '/staff/shop',
+};
+
+/* ---------------- Approval hierarchy ---------------- */
+
+export const STAFF_LEVEL_MIN = 1;
+export const STAFF_LEVEL_MAX = 9;
+export const VENDOR_ADMIN_LEVEL = 10;
+
+export const LEVEL_LABELS = {
+  1: 'Level 1 - Requester',
+  2: 'Level 2 - Senior',
+  3: 'Level 3 - Supervisor',
+  4: 'Level 4 - Manager',
+  5: 'Level 5 - Senior Manager',
+  6: 'Level 6',
+  7: 'Level 7',
+  8: 'Level 8',
+  9: 'Level 9 - Head',
+  [VENDOR_ADMIN_LEVEL]: 'Vendor Admin',
+};
+
+/** Short label for whoever a request is currently sitting with. */
+export const levelLabel = (level) => {
+  if (level === null || level === undefined) return 'Sent to Print World';
+  if (level >= VENDOR_ADMIN_LEVEL) return 'Vendor Admin';
+  return LEVEL_LABELS[level] || `Level ${level}`;
 };
 
 export const PAGE_SIZE = 10;

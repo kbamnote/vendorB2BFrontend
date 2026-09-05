@@ -69,6 +69,19 @@ export const requestApi = {
   create: (payload) => client.post('/requests', payload),
   quote: (id, payload) => client.patch(`/requests/${id}/quote`, payload),
   setStatus: (id, status, note) => client.patch(`/requests/${id}/status`, { status, note }),
+
+  // Internal approval chain
+  approve: (id, note) => client.patch(`/requests/${id}/approve`, { note }),
+  returnToPrevious: (id, note) => client.patch(`/requests/${id}/return`, { note }),
+  editItems: (id, items, note) => client.patch(`/requests/${id}/items`, { items, note }),
+};
+
+/* ---------------- Notifications ---------------- */
+export const notificationApi = {
+  list: (params) => client.get('/notifications', { params }),
+  unreadCount: () => client.get('/notifications/unread-count'),
+  markRead: (id) => client.patch(`/notifications/${id}/read`),
+  markAllRead: () => client.patch('/notifications/read-all'),
 };
 
 /* ---------------- Image uploads (Cloudinary) ---------------- */
@@ -83,4 +96,9 @@ export const myApi = {
   products: (params) => client.get('/my/products', { params }),
   get: (id) => client.get(`/my/products/${id}`),
   categories: () => client.get('/my/categories'),
+
+  // Saved basket, one per user
+  getCart: () => client.get('/my/cart'),
+  saveCart: (items) => client.put('/my/cart', { items }),
+  clearCart: () => client.delete('/my/cart'),
 };

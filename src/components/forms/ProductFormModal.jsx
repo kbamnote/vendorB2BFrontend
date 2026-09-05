@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Save } from 'lucide-react';
+import { Save, Plus, Trash2, Tag } from 'lucide-react';
 import { productApi } from '../../api/services';
 import { useToast } from '../../context/ToastContext';
-import { Button, ImageUpload, Input, Modal, Select, Textarea } from '../ui';
+import { Button, Input, Modal, ProductImages, Select, Textarea } from '../ui';
 import { fieldErrors } from '../../utils/format';
 
 const EMPTY = {
   name: '',
   sku: '',
   category: 'General',
+  shortDescription: '',
   description: '',
   unit: 'pcs',
   basePrice: '',
   currency: 'INR',
   hsnCode: '',
   taxPercent: '',
-  imageUrl: '',
-  imagePublicId: '',
+  images: [],
+  attributes: [],
 };
 
 const UNITS = ['pcs', 'box', 'pack', 'ream', 'roll', 'kg', 'litre', 'sqft', 'set'];
@@ -32,23 +33,36 @@ export default function ProductFormModal({ open, product, categories = [], onClo
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setForm(
-      product
-        ? {
-            name: product.name || '',
-            sku: product.sku || '',
-            category: product.category || 'General',
-            description: product.description || '',
-            unit: product.unit || 'pcs',
-            basePrice: product.basePrice ?? '',
-            currency: product.currency || 'INR',
-            hsnCode: product.hsnCode || '',
-            taxPercent: product.taxPercent ?? '',
-            imageUrl: product.imageUrl || '',
-            imagePublicId: product.imagePublicId || '',
-          }
-        : EMPTY
-    );
+
+    if (!product) {
+      setForm(EMPTY);
+      return;
+    }
+
+    // Older products predate the gallery, so fall back to the single image.
+    const images = product.images?.length
+      ? product.images
+      : product.imageUrl
+        ? [{ url: product.imageUrl, publicId: product.imagePublicId || '', alt: '' }]
+        : [];
+
+    setForm({
+      name: product.name || '',
+      sku: product.sku || '',
+      category: product.category || 'General',
+      shortDescription: product.shortDescription || '',
+      description: product.description || '',
+      unit: product.unit || 'pcs',
+      basePrice: product.basePrice ?? '',
+      currency: product.currency || 'INR',
+      hsnCode: product.hsnCode || '',
+      taxPercent: product.taxPercent ?? '',
+      images,
+      attributes: (product.attributes || []).map((attribute) => ({
+        name: attribute.name,
+        options: (attribute.options || []).join(', '),
+      })),
+    });
   }, [open, product]);
 
   const set = (key) => (e) => {
@@ -56,6 +70,28 @@ export default function ProductFormModal({ open, product, categories = [], onClo
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
+
+  /* ---------------- option groups ---------------- */
+
+  const addAttribute = () =>
+    setForm((current) => ({
+      ...current,
+      attributes: [...current.attributes, { name: '', options: '' }],
+    }));
+
+  const setAttribute = (index, key, value) =>
+    setForm((current) => ({
+      ...current,
+      attributes: current.attributes.map((entry, i) =>
+        i === index ? { ...entry, [key]: value } : entry
+      ),
+    }));
+
+  const removeAttribute = (index) =>
+    setForm((current) => ({
+      ...current,
+      attributes: current.attributes.filter((_, i) => i !== index),
+    }));
 
   const validate = () => {
     const next = {};
@@ -66,6 +102,10 @@ export default function ProductFormModal({ open, product, categories = [], onClo
     if (form.basePrice === '' || Number.isNaN(Number(form.basePrice)))
       next.basePrice = 'Base price is required';
     else if (Number(form.basePrice) < 0) next.basePrice = 'Base price cannot be negative';
+
+    if (form.attributes.some((entry) => entry.name.trim() && !entry.options.trim())) {
+      next.attributes = 'Give every option group at least one value';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -76,16 +116,33 @@ export default function ProductFormModal({ open, product, categories = [], onClo
 
     setSaving(true);
     try {
+      const attributes = form.attributes
+        .map((entry) => ({
+          name: entry.name.trim(),
+          options: entry.options
+            .split(',')
+            .map((option) => option.trim())
+            .filter(Boolean),
+        }))
+        .filter((entry) => entry.name && entry.options.length);
+
       const payload = {
         ...form,
         sku: form.sku.trim().toUpperCase(),
         basePrice: Number(form.basePrice),
         taxPercent: form.taxPercent === '' ? 0 : Number(form.taxPercent),
         category: form.category?.trim() || 'General',
+        attributes,
+        images: form.images,
+        // The first image is the primary one used in every listing.
+        imageUrl: form.images[0]?.url || '',
+        imagePublicId: form.images[0]?.publicId || '',
       };
+
       const response = isEdit
         ? await productApi.update(product._id, payload)
         : await productApi.create(payload);
+
       toast.success(response.message);
       onSaved?.(response.data.product);
       onClose();
@@ -178,28 +235,94 @@ export default function ProductFormModal({ open, product, categories = [], onClo
             onChange={set('taxPercent')}
             error={errors.taxPercent}
           />
-          <Input label="HSN code" value={form.hsnCode} onChange={set('hsnCode')} error={errors.hsnCode} />
-
-          <div className="span-2">
-            <ImageUpload
-              value={form.imageUrl}
-              publicId={form.imagePublicId}
-              disabled={saving}
-              onChange={({ imageUrl, imagePublicId }) =>
-                setForm((current) => ({ ...current, imageUrl, imagePublicId }))
-              }
-            />
-          </div>
+          <Input
+            label="HSN code"
+            value={form.hsnCode}
+            onChange={set('hsnCode')}
+            error={errors.hsnCode}
+          />
 
           <Textarea
             className="span-2"
-            label="Description"
-            placeholder="Specification, packaging details, lead time..."
+            label="Short description"
+            placeholder="One or two lines shown under the product name in the shop"
+            value={form.shortDescription}
+            onChange={set('shortDescription')}
+            error={errors.shortDescription}
+            hint="Kept brief - the full description goes below"
+            style={{ minHeight: 64 }}
+          />
+
+          <Textarea
+            className="span-2"
+            label="Full description"
+            placeholder="Specification, material, packaging details, lead time..."
             value={form.description}
             onChange={set('description')}
             error={errors.description}
           />
+
+          <div className="span-2">
+            <ProductImages
+              images={form.images}
+              disabled={saving}
+              onChange={(images) => setForm((current) => ({ ...current, images }))}
+            />
+          </div>
         </div>
+
+        <div
+          className="row gap-8 mt-24"
+          style={{ paddingTop: 20, borderTop: '1px solid var(--border)' }}
+        >
+          <div className="stat-icon" style={{ position: 'static', width: 34, height: 34 }}>
+            <Tag size={16} />
+          </div>
+          <div className="grow">
+            <div className="card-title">Options</div>
+            <div className="card-subtitle">
+              Choices a vendor picks from, such as Size or Finish. Shown as buttons on the product
+              page.
+            </div>
+          </div>
+          <Button variant="secondary" icon={Plus} onClick={addAttribute}>
+            Add group
+          </Button>
+        </div>
+
+        {errors.attributes && <div className="field-error mt-8">{errors.attributes}</div>}
+
+        {form.attributes.length > 0 && (
+          <div className="col gap-12 mt-16">
+            {form.attributes.map((attribute, index) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <div className="row gap-8" key={index} style={{ alignItems: 'flex-end' }}>
+                <Input
+                  label={index === 0 ? 'Option name' : undefined}
+                  placeholder="Size"
+                  value={attribute.name}
+                  onChange={(e) => setAttribute(index, 'name', e.target.value)}
+                  style={{ maxWidth: 180 }}
+                />
+                <Input
+                  className="grow"
+                  label={index === 0 ? 'Values (comma separated)' : undefined}
+                  placeholder="A4, A5, Letter"
+                  value={attribute.options}
+                  onChange={(e) => setAttribute(index, 'options', e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-icon"
+                  title="Remove this option group"
+                  onClick={() => removeAttribute(index)}
+                >
+                  <Trash2 size={15} color="var(--danger-600)" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </form>
     </Modal>
   );

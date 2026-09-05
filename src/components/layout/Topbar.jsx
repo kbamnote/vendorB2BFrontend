@@ -4,6 +4,7 @@ import { Menu, ChevronDown, LogOut, UserCircle, ShieldCheck } from 'lucide-react
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../utils/constants';
 import { initials } from '../../utils/format';
+import NotificationBell from './NotificationBell';
 
 export default function Topbar({ onMenuClick }) {
   const { user, role, vendor, signOut } = useAuth();
@@ -38,6 +39,8 @@ export default function Topbar({ onMenuClick }) {
           <ShieldCheck size={13} />
           {ROLE_LABELS[role] || role}
         </span>
+
+        <NotificationBell />
 
         <div className="user-menu" ref={menuRef}>
           <button type="button" className="user-chip" onClick={() => setMenuOpen((v) => !v)}>

@@ -3,11 +3,30 @@ import { Save, RefreshCw, Copy } from 'lucide-react';
 import { userApi } from '../../api/services';
 import { useToast } from '../../context/ToastContext';
 import { Button, Input, Modal, Select } from '../ui';
-import { ROLE_LABELS, ROLES } from '../../utils/constants';
+import {
+  LEVEL_LABELS,
+  ROLE_LABELS,
+  ROLES,
+  STAFF_LEVEL_MAX,
+  STAFF_LEVEL_MIN,
+} from '../../utils/constants';
 import { fieldErrors } from '../../utils/format';
 import { copyCredentials, suggestPassword, validatePassword } from '../../utils/password';
 
-const EMPTY = { name: '', email: '', password: '', phone: '', designation: '', vendor: '' };
+const EMPTY = {
+  name: '',
+  email: '',
+  password: '',
+  phone: '',
+  designation: '',
+  vendor: '',
+  approvalLevel: STAFF_LEVEL_MIN,
+};
+
+const STAFF_LEVELS = Array.from(
+  { length: STAFF_LEVEL_MAX - STAFF_LEVEL_MIN + 1 },
+  (_, index) => STAFF_LEVEL_MIN + index
+);
 
 /**
  * Creates or edits a portal login.
@@ -45,6 +64,7 @@ export default function UserFormModal({
             phone: user.phone || '',
             designation: user.designation || '',
             vendor: user.vendor?._id || user.vendor || '',
+            approvalLevel: user.approvalLevel || STAFF_LEVEL_MIN,
           }
         : { ...EMPTY, password: suggestPassword(), vendor: lockedVendor?._id || '' }
     );
@@ -88,6 +108,7 @@ export default function UserFormModal({
           email: form.email,
           phone: form.phone,
           designation: form.designation,
+          ...(role === ROLES.VENDOR_STAFF ? { approvalLevel: Number(form.approvalLevel) } : {}),
         });
       } else {
         response = await userApi.create({
@@ -98,6 +119,7 @@ export default function UserFormModal({
           designation: form.designation,
           role,
           vendor: lockedVendor?._id || form.vendor || undefined,
+          ...(role === ROLES.VENDOR_STAFF ? { approvalLevel: Number(form.approvalLevel) } : {}),
         });
       }
       toast.success(response.message);
@@ -214,6 +236,23 @@ export default function UserFormModal({
             onChange={set('designation')}
             error={errors.designation}
           />
+
+          {role === ROLES.VENDOR_STAFF && (
+            <Select
+              className="span-2"
+              label="Approval level"
+              value={form.approvalLevel}
+              onChange={set('approvalLevel')}
+              error={errors.approvalLevel}
+              hint="Requests this person raises go to the next level above them. Higher levels approve what lower levels send up."
+            >
+              {STAFF_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {LEVEL_LABELS[level] || `Level ${level}`}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
 
         {!isEdit && (

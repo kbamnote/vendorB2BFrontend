@@ -5,7 +5,7 @@ export { default as DataTable } from './DataTable';
 export { default as Pagination } from './Pagination';
 export { default as SearchInput } from './SearchInput';
 export { default as EmptyState } from './EmptyState';
-export { default as ImageUpload } from './ImageUpload';
+export { default as ProductImages } from './ProductImages';
 export { default as StatCard } from './StatCard';
 export { default as PageHeader } from './PageHeader';
 export { Card, CardHeader, CardBody } from './Card';

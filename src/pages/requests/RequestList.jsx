@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Eye, ShoppingBag } from 'lucide-react';
+import { FileText, Eye, ShoppingBag, Inbox } from 'lucide-react';
 import { requestApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import usePaginatedQuery from '../../hooks/usePaginatedQuery';
@@ -19,6 +19,7 @@ import {
   REQUEST_STATUS,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_TONE,
+  levelLabel,
 } from '../../utils/constants';
 import { currency, formatDate } from '../../utils/format';
 
@@ -38,11 +39,18 @@ export default function RequestList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [inbox, setInbox] = useState(false);
   const debouncedSearch = useDebounce(search);
 
   const params = useMemo(
-    () => ({ page, limit: PAGE_SIZE, status, search: debouncedSearch || undefined }),
-    [page, status, debouncedSearch]
+    () => ({
+      page,
+      limit: PAGE_SIZE,
+      status: inbox ? undefined : status,
+      inbox: inbox ? 'me' : undefined,
+      search: debouncedSearch || undefined,
+    }),
+    [page, status, inbox, debouncedSearch]
   );
 
   const { items, pagination, loading, error } = usePaginatedQuery(requestApi.list, params);
@@ -109,7 +117,14 @@ export default function RequestList() {
       key: 'status',
       header: 'Status',
       render: (row) => (
-        <Badge tone={REQUEST_STATUS_TONE[row.status]}>{REQUEST_STATUS_LABELS[row.status]}</Badge>
+        <div>
+          <Badge tone={REQUEST_STATUS_TONE[row.status]}>{REQUEST_STATUS_LABELS[row.status]}</Badge>
+          {row.status === REQUEST_STATUS.PENDING_APPROVAL && (
+            <div className="text-xs text-muted" style={{ marginTop: 3 }}>
+              with {levelLabel(row.approval?.currentLevel)}
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -151,9 +166,23 @@ export default function RequestList() {
             }}
             placeholder="Search by request number or product..."
           />
+          {!isSuperAdmin && (
+            <button
+              type="button"
+              className={`btn ${inbox ? '' : 'btn-secondary'}`}
+              onClick={() => {
+                setInbox((value) => !value);
+                setPage(1);
+              }}
+            >
+              <Inbox size={15} />
+              Awaiting my approval
+            </button>
+          )}
           <select
             className="select"
             value={status}
+            disabled={inbox}
             onChange={(e) => {
               setStatus(e.target.value);
               setPage(1);

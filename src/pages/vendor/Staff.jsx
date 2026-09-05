@@ -17,7 +17,7 @@ import {
   SearchInput,
   StatusBadge,
 } from '../../components/ui';
-import { PAGE_SIZE, ROLES } from '../../utils/constants';
+import { LEVEL_LABELS, PAGE_SIZE, ROLES } from '../../utils/constants';
 import { formatDate, initials } from '../../utils/format';
 
 /**
@@ -81,6 +81,15 @@ export default function VendorStaff() {
             <div className="text-xs text-muted truncate">{row.email}</div>
           </div>
         </div>
+      ),
+    },
+    {
+      key: 'approvalLevel',
+      header: 'Approval level',
+      render: (row) => (
+        <span className="badge badge-brand">
+          {LEVEL_LABELS[row.approvalLevel] || `Level ${row.approvalLevel || 1}`}
+        </span>
       ),
     },
     { key: 'designation', header: 'Designation', render: (row) => row.designation || '-' },

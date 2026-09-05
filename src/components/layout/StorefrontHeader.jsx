@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
   ShoppingCart,
@@ -16,9 +16,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { myApi } from '../../api/services';
+import { myApi, requestApi } from '../../api/services';
 import { APP_NAME, REQUESTS_ROUTE, ROLES, SHOP_ROUTE } from '../../utils/constants';
 import { initials } from '../../utils/format';
+import NotificationBell from './NotificationBell';
 
 /**
  * Storefront header for vendor roles.
@@ -31,6 +32,7 @@ export default function StorefrontHeader() {
   const { user, vendor, isVendorAdmin, signOut } = useAuth();
   const cart = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const shopPath = SHOP_ROUTE[user?.role] || '/';
@@ -41,6 +43,7 @@ export default function StorefrontHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [awaitingMe, setAwaitingMe] = useState(0);
   const menuRef = useRef(null);
 
   const activeCategory = searchParams.get('category') || '';
@@ -59,6 +62,23 @@ export default function StorefrontHeader() {
       cancelled = true;
     };
   }, []);
+
+  // How many requests are sitting at this user's approval level. Re-checked on
+  // navigation, since acting on one is what changes the count.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await requestApi.stats();
+        if (!cancelled) setAwaitingMe(response.data.awaitingMyApproval || 0);
+      } catch {
+        if (!cancelled) setAwaitingMe(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -130,12 +150,17 @@ export default function StorefrontHeader() {
 
         <div className="store-header-actions">
           <NavLink to={requestsPath} className="store-action">
-            <FileText size={18} />
+            <span className="store-cart-icon">
+              <FileText size={18} />
+              {awaitingMe > 0 && <span className="store-cart-count">{awaitingMe}</span>}
+            </span>
             <span className="store-action-text">
-              <small>Quotations</small>
+              <small>{awaitingMe > 0 ? 'Needs your approval' : 'Quotations'}</small>
               <strong>My requests</strong>
             </span>
           </NavLink>
+
+          <NotificationBell variant="store" />
 
           <div className="user-menu" ref={menuRef}>
             <button type="button" className="store-action" onClick={() => setMenuOpen((v) => !v)}>

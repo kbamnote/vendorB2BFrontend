@@ -11,6 +11,7 @@ import {
   CalendarClock,
 } from 'lucide-react';
 import { requestApi } from '../../api/services';
+import ApprovalPanel from '../../components/forms/ApprovalPanel';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -161,9 +162,13 @@ export default function RequestDetail() {
 
   const { quotation } = request;
   const isQuoted = request.status === REQUEST_STATUS.QUOTED;
+  const inApproval = request.status === REQUEST_STATUS.PENDING_APPROVAL;
   const canDecide = !isSuperAdmin && isQuoted;
   const canCancel =
-    !isSuperAdmin && [REQUEST_STATUS.SUBMITTED, REQUEST_STATUS.QUOTED].includes(request.status);
+    !isSuperAdmin &&
+    [REQUEST_STATUS.PENDING_APPROVAL, REQUEST_STATUS.SUBMITTED, REQUEST_STATUS.QUOTED].includes(
+      request.status
+    );
 
   return (
     <div>
@@ -248,6 +253,8 @@ export default function RequestDetail() {
       />
 
       <div style={{ display: 'grid', gap: 20 }}>
+        {!isSuperAdmin && <ApprovalPanel request={request} onChanged={load} />}
+
         <Card>
           <CardHeader title="Request details" />
           <CardBody>
@@ -487,6 +494,14 @@ export default function RequestDetail() {
               )}
             </CardBody>
           </Card>
+        )}
+
+        {inApproval && (
+          <div className="alert alert-info">
+            <FileText size={16} />
+            This request is still moving through your organisation. Print World will only see it
+            once your vendor admin approves it.
+          </div>
         )}
 
         {!quotation && !editable && request.status === REQUEST_STATUS.SUBMITTED && (
