@@ -8,6 +8,7 @@ import {
   Send,
   Pencil,
   Clock,
+  Package,
 } from 'lucide-react';
 import { requestApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +16,7 @@ import { useToast } from '../../context/ToastContext';
 import { Button, Card, CardBody, CardHeader, Modal, Textarea } from '../ui';
 import { REQUEST_STATUS, ROLES, VENDOR_ADMIN_LEVEL, levelLabel } from '../../utils/constants';
 import { formatDateTime } from '../../utils/format';
+import { thumbUrl } from '../../utils/upload';
 
 const ACTION_META = {
   submitted: { icon: Send, tone: 'info', label: 'Raised' },
@@ -53,6 +55,7 @@ export default function ApprovalPanel({ request, onChanged }) {
           name: item.name,
           sku: item.sku,
           unit: item.unit,
+          imageUrl: item.imageUrl,
           quantity: item.quantity,
           original: item.quantity,
           keep: true,
@@ -266,8 +269,19 @@ export default function ApprovalPanel({ request, onChanged }) {
               {draft.map((line, index) => (
                 <tr key={line.product} style={{ opacity: line.keep ? 1 : 0.45 }}>
                   <td>
-                    <div className="cell-primary">{line.name}</div>
-                    <div className="text-xs text-muted mono">{line.sku}</div>
+                    <div className="row gap-12">
+                      {line.imageUrl ? (
+                        <img className="thumb" src={thumbUrl(line.imageUrl)} alt="" loading="lazy" />
+                      ) : (
+                        <div className="avatar sq">
+                          <Package size={16} />
+                        </div>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div className="cell-primary">{line.name}</div>
+                        <div className="text-xs text-muted mono">{line.sku}</div>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <input

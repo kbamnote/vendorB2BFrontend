@@ -22,6 +22,7 @@ import {
   levelLabel,
 } from '../../utils/constants';
 import { currency, formatDate } from '../../utils/format';
+import { thumbUrl } from '../../utils/upload';
 
 const totalUnits = (items = []) => items.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
@@ -94,12 +95,34 @@ export default function RequestList() {
       key: 'items',
       header: 'Items',
       align: 'center',
-      render: (row) => (
-        <span className="text-sm nowrap">
-          {row.items?.length || 0} line{row.items?.length === 1 ? '' : 's'}
-          <span className="text-muted"> / {totalUnits(row.items)} units</span>
-        </span>
-      ),
+      render: (row) => {
+        const withImages = (row.items || []).filter((item) => item.imageUrl).slice(0, 4);
+        const extra = (row.items?.length || 0) - withImages.length;
+
+        return (
+          <div className="row gap-8" style={{ justifyContent: 'center' }}>
+            {withImages.length > 0 && (
+              <span className="thumb-stack">
+                {withImages.map((item, index) => (
+                  <img
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`${item.sku}-${index}`}
+                    src={thumbUrl(item.imageUrl, 80)}
+                    alt=""
+                    title={item.name}
+                    loading="lazy"
+                  />
+                ))}
+                {extra > 0 && <span className="thumb-more">+{extra}</span>}
+              </span>
+            )}
+            <span className="text-sm nowrap">
+              {row.items?.length || 0} line{row.items?.length === 1 ? '' : 's'}
+              <span className="text-muted"> / {totalUnits(row.items)} units</span>
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'value',

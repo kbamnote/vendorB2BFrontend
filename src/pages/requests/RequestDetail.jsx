@@ -33,6 +33,7 @@ import {
   REQUEST_STATUS_TONE,
 } from '../../utils/constants';
 import { currency, formatDate, formatDateTime } from '../../utils/format';
+import { thumbUrl } from '../../utils/upload';
 
 const round2 = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const toDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
@@ -313,9 +314,18 @@ export default function RequestDetail() {
                     <tr key={item.product}>
                       <td>
                         <div className="row gap-12">
-                          <div className="avatar sq">
-                            <Package size={16} />
-                          </div>
+                          {item.imageUrl ? (
+                            <img
+                              className="thumb"
+                              src={thumbUrl(item.imageUrl)}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="avatar sq">
+                              <Package size={16} />
+                            </div>
+                          )}
                           <div style={{ minWidth: 0 }}>
                             <div className="cell-primary">{item.name}</div>
                             <div className="text-xs text-muted mono">{item.sku}</div>
